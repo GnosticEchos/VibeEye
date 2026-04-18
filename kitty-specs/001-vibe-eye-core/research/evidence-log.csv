@@ -1,0 +1,3 @@
+SourceID,Finding,Rationale
+S01,Embeddable Servo library is production-ready.,Validates "No Chromium" mandate.
+S02,Help-tree requirement is mandatory for Sovereign agents.,Validates Sonar Pattern.

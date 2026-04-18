@@ -1,0 +1,11 @@
+vcs:
+  type: git
+agents:
+  available:
+  - gemini
+  auto_commit: true
+project:
+  uuid: 5f79b4a8-055c-4e72-901b-83d77819b6ca
+  slug: vibeeye
+  node_id: ed14140f9369
+  build_id: 9f9b7926-a7ba-4c07-a49f-bb4ae4ff9b07
