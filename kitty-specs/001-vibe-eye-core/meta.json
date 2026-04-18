@@ -1,0 +1,10 @@
+{
+  "created_at": "2026-04-18T15:55:54.600689+00:00",
+  "friendly_name": "vibe eye core",
+  "mission_id": "01KPGMWHB80TNDA5FZ55ZPRMV1",
+  "mission_number": "001",
+  "mission_slug": "001-vibe-eye-core",
+  "mission_type": "software-dev",
+  "slug": "001-vibe-eye-core",
+  "target_branch": "main"
+}
