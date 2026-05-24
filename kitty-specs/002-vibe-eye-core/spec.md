@@ -18,9 +18,15 @@ Establish the foundational Rust binary (`vibe-eye`) that embeds the Servo 0.1.0 
 ### 2.3 Self-Reflection (Sonar)
 - **FR-06**: **Help Tree**: Implement the `--help-tree -f json` sonar capability for autonomous agent discovery.
 
+### 2.4 Interface Architecture
+- **FR-07**: **Workspace Structure**: Use a multi-crate workspace with `vibeeye-core`, `vibeeye-app`, `vibeeye-cli`, and `vibeeye-mcp` crates.
+- **FR-08**: **Interface Parity**: CLI and MCP must expose identical capabilities via the shared `vibeeye-app` library (thin-ui pattern).
+
 ## 3. Non-Functional Requirements
 - **NFR-01**: **Resource Efficiency**: Peak memory usage MUST remain < 500MB during page load.
 - **NFR-02**: **Zero Externalities**: No dependency on X11, Wayland, or external scraping proxies.
+- **NFR-03**: **Testability**: Core browser logic must be testable independent of CLI or MCP transport layers.
+- **NFR-04**: **Code Quality**: All code MUST pass `cargo clippy --all-targets --all-features -- -D warnings` and `cargo crap --workspace` (CRAP threshold ≤ 30).
 
 ## 4. Constraints
 - **C-01**: **Release Affinity**: MUST use Servo 0.1.0.
@@ -31,3 +37,5 @@ Establish the foundational Rust binary (`vibe-eye`) that embeds the Servo 0.1.0 
 - [ ] `vibe-eye --help-tree -f json` returns a machine-readable capability map.
 - [ ] Agent can retrieve technical documentation from a modern site (e.g., docs.rs) via command line.
 - [ ] Tool exits with code 0 after successful Markdown capture.
+- [ ] Workspace builds with `cargo build --workspace` without errors.
+- [ ] MCP server exposes same tools as CLI (`tools/list` matches `--help-tree` output).

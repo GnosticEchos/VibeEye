@@ -1,0 +1,56 @@
+{
+  "event_count": 5,
+  "last_event_id": "01KPGPPGME78DAPPPXJDWN92EK",
+  "materialized_at": "2026-04-18T16:27:34.414293+00:00",
+  "mission_number": "002",
+  "mission_slug": "002-vibe-eye-core",
+  "mission_type": "software-dev",
+  "summary": {
+    "approved": 0,
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 0,
+    "for_review": 0,
+    "in_progress": 0,
+    "in_review": 0,
+    "planned": 5
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KPGPPGJ1HZJ0QJ5R5QWZ076P",
+      "last_transition_at": "2026-04-18T16:27:34.337773+00:00"
+    },
+    "WP02": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KPGPPGKAXNARC9CGQS7EH5SV",
+      "last_transition_at": "2026-04-18T16:27:34.378655+00:00"
+    },
+    "WP03": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KPGPPGKKE9H2RW0659Y92NW2",
+      "last_transition_at": "2026-04-18T16:27:34.387112+00:00"
+    },
+    "WP04": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KPGPPGKSYB44KSAKD9F9VXEK",
+      "last_transition_at": "2026-04-18T16:27:34.393694+00:00"
+    },
+    "WP05": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KPGPPGME78DAPPPXJDWN92EK",
+      "last_transition_at": "2026-04-18T16:27:34.414293+00:00"
+    }
+  }
+}

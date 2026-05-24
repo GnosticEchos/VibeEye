@@ -1,0 +1,44 @@
+[package]
+name = "vibeeye-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared library for VibeEye browser logic and tool registry"
+
+[dependencies]
+vibeeye-core = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+
+# Browser engine (constrained by spec C-01)
+servo = { workspace = true }
+
+# MCP SDK
+rust-mcp-sdk = { workspace = true }
+rust-mcp-schema = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Content processing
+pulldown-cmark = { workspace = true }
+pulldown-cmark-to-cmark = { workspace = true }
+scraper = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tempfile = { workspace = true }

@@ -1,9 +1,9 @@
 ---
 work_package_id: WP01
-title: Workspace & Engine Init
+title: Workspace & Core Init
 dependencies: []
 requirement_refs:
-- FR-01
+- FR-07
 - C-01
 planning_base_branch: main
 merge_target_branch: main
@@ -13,8 +13,11 @@ history: []
 execution_mode: exclusive
 owned_files:
 - Cargo.toml
-- src/main.rs
+- crates/vibeeye-core/Cargo.toml
+- crates/vibeeye-core/src/lib.rs
+- crates/vibeeye-core/src/domain.rs
+- crates/vibeeye-core/src/error.rs
 tags: []
 ---
-# WP01: Workspace & Engine Init
-Establish the Rust workspace and perform a minimal boot of the Servo 0.1.0 engine.
+# WP01: Workspace & Core Init
+Setup workspace `Cargo.toml` and create `vibeeye-core` crate with domain types and error definitions.
