@@ -8931,6 +8931,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "dpi",
  "mockall",
  "pulldown-cmark",
  "pulldown-cmark-to-cmark",
@@ -8945,6 +8946,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
+ "url",
  "vibeeye-core",
 ]
 

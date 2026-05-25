@@ -22,6 +22,8 @@ schemars = { workspace = true }
 
 # Browser engine (constrained by spec C-01)
 servo = { workspace = true }
+url = { workspace = true }
+dpi = { workspace = true }
 
 # MCP SDK
 rust-mcp-sdk = { workspace = true }
