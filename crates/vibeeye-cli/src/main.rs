@@ -9,8 +9,8 @@ use cli::Cli;
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    let invocation = help_tree::parse_help_tree_invocation(&args[1..])
-        .map_err(|e| anyhow::anyhow!(e))?;
+    let invocation =
+        help_tree::parse_help_tree_invocation(&args[1..]).map_err(|e| anyhow::anyhow!(e))?;
     if let Some(invocation) = invocation {
         help_tree::run_for_path::<Cli>(invocation.opts, &invocation.path)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
@@ -23,6 +23,12 @@ fn main() -> Result<()> {
 
 async fn async_main() -> Result<()> {
     let cli = Cli::parse();
+
+    if cli.verbose {
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
+    }
 
     if let Some(command) = cli.command {
         commands::run(command).await?;

@@ -108,7 +108,7 @@ impl BrowserSession {
 
     /// Close the browser session, shutting down the engine thread.
     pub async fn close(self) -> Result<()> {
-        if let Some(engine) = self.engine {
+        if let Some(mut engine) = self.engine {
             engine.shutdown();
         }
         Ok(())

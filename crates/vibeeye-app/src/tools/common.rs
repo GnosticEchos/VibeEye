@@ -13,8 +13,7 @@ pub struct PageCapture {
 
 /// Navigate to URL and capture page data
 pub async fn navigate_and_capture(url: &str) -> Result<PageCapture> {
-    let mut session = BrowserSession::new()
-        .map_err(|e| AppError::Browser(e.to_string()))?;
+    let mut session = BrowserSession::new().map_err(|e| AppError::Browser(e.to_string()))?;
 
     session
         .navigate(url)

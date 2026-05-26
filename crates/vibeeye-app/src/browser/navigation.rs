@@ -19,20 +19,18 @@ pub fn wait_for_load(servo: &Servo, webview: &WebView) {
 
 /// Extract raw HTML via JavaScript `document.documentElement.outerHTML`.
 pub fn extract_html(servo: &Servo, webview: &WebView) -> Result<String> {
-    let result_slot: Arc<Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>> =
-        Arc::new(Mutex::new(None));
+    let result_slot: Arc<
+        Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>,
+    > = Arc::new(Mutex::new(None));
 
     let slot = result_slot.clone();
-    webview.evaluate_javascript(
-        "document.documentElement.outerHTML",
-        move |result| {
-            let mut guard = slot.lock().unwrap();
-            *guard = Some(result.map(|v| match v {
-                servo::JSValue::String(s) => s,
-                other => format!("{other:?}"),
-            }));
-        },
-    );
+    webview.evaluate_javascript("document.documentElement.outerHTML", move |result| {
+        let mut guard = slot.lock().unwrap();
+        *guard = Some(result.map(|v| match v {
+            servo::JSValue::String(s) => s,
+            other => format!("{other:?}"),
+        }));
+    });
 
     while result_slot.lock().unwrap().is_none() {
         servo.spin_event_loop();
@@ -53,8 +51,9 @@ pub fn extract_html(servo: &Servo, webview: &WebView) -> Result<String> {
 
 /// Extract visible text via JavaScript `document.body.innerText`.
 pub fn extract_text(servo: &Servo, webview: &WebView) -> Result<String> {
-    let result_slot: Arc<Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>> =
-        Arc::new(Mutex::new(None));
+    let result_slot: Arc<
+        Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>,
+    > = Arc::new(Mutex::new(None));
 
     let slot = result_slot.clone();
     webview.evaluate_javascript(

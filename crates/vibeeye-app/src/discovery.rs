@@ -1,7 +1,7 @@
 //! SonarDiscovery trait for reflective capability discovery
 
 use async_trait::async_trait;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::json;
 
 /// Static metadata for capability discovery (no instantiation required)

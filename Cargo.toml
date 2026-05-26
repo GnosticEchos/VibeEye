@@ -30,6 +30,7 @@ serde_json = "1.0.140"
 servo = "0.1.0"
 url = "2.5"
 dpi = "0.1"
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 
 # MCP SDK
 rust-mcp-sdk = { version = "0.9.0", features = ["server", "stdio"] }
@@ -50,6 +51,7 @@ pulldown-cmark-to-cmark = "21.0.0"
 # HTML processing
 scraper = "0.23.1"
 html5ever = "0.31.0"
+html-to-markdown-rs = "3.5"
 
 # Time handling
 chrono = { version = "0.4.41", features = ["serde"] }

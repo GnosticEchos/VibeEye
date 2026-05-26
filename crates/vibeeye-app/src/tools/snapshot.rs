@@ -5,8 +5,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
 use crate::Result;
+use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
 
 /// Input for the snapshot tool
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]

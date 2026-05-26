@@ -5,8 +5,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
 use crate::Result;
+use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
 use vibeeye_core::ContentFormat;
 
 /// Input for the extract tool

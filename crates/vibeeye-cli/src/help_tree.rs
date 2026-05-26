@@ -3,7 +3,7 @@
 //! Derived from the HelpTree reference implementation.
 
 use clap::{Args, Command, CommandFactory};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashSet;
 
 /// Output format for `--help-tree`.
@@ -45,7 +45,11 @@ pub struct HelpTreeArgs {
     )]
     pub tree_all: bool,
 
-    #[arg(long = "tree-output", help = "Output format (text or json)", value_enum)]
+    #[arg(
+        long = "tree-output",
+        help = "Output format (text or json)",
+        value_enum
+    )]
     pub tree_output: Option<HelpTreeOutputFormat>,
 }
 
@@ -80,44 +84,64 @@ impl Default for HelpTreeOpts {
 ///
 /// Returns `Ok(None)` if `--help-tree` is not present.
 pub fn parse_help_tree_invocation(argv: &[String]) -> Result<Option<HelpTreeInvocation>, String> {
-    let mut state = ParseState::default();
-
-    let mut idx = 0;
-    while idx < argv.len() {
-        let arg = &argv[idx];
-        match arg.as_str() {
-            "--help-tree" => state.help_tree = true,
-            "--tree-depth" | "-L" => {
-                idx += 1;
-                state.depth_limit = Some(parse_usize(argv, idx, arg)?);
-            }
-            "--tree-ignore" | "-I" => {
-                idx += 1;
-                state.ignore.push(parse_string(argv, idx, arg)?);
-            }
-            "--tree-all" | "-a" => state.tree_all = true,
-            "--tree-output" => {
-                idx += 1;
-                state.output = Some(parse_tree_output(argv, idx)?);
-            }
-            "--format" | "-f" => {
-                idx += 1;
-                let value = parse_string(argv, idx, arg)?;
-                if arg == "--format" || arg == "-f" {
-                    state.output = Some(parse_format_value(value)?);
-                }
-            }
-            token if token.starts_with('-') => {}
-            token => state.path.push(token.to_string()),
-        }
-        idx += 1;
-    }
-
-    if !state.help_tree {
+    // Fast path: if `--help-tree` is not present, none of the other flags
+    // belong to us (e.g. `-f text` is for a subcommand, not help-tree).
+    if !argv.iter().any(|a| a == "--help-tree") {
         return Ok(None);
     }
 
+    let mut state = ParseState {
+        help_tree: true,
+        ..Default::default()
+    };
+
+    let mut idx = 0;
+    while idx < argv.len() {
+        idx = process_one_arg(&mut state, argv, idx)?;
+        idx += 1;
+    }
+
     Ok(Some(state.into_invocation()))
+}
+
+/// Process a single argv token and any following value tokens.
+/// Returns the index of the last consumed token.
+fn process_one_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+) -> Result<usize, String> {
+    let arg = &argv[idx];
+    match arg.as_str() {
+        "--help-tree" => state.help_tree = true,
+        "--tree-depth" | "-L" => {
+            let next = idx + 1;
+            state.depth_limit = Some(parse_usize(argv, next, arg)?);
+            return Ok(next);
+        }
+        "--tree-ignore" | "-I" => {
+            let next = idx + 1;
+            state.ignore.push(parse_string(argv, next, arg)?);
+            return Ok(next);
+        }
+        "--tree-all" | "-a" => state.tree_all = true,
+        "--tree-output" => {
+            let next = idx + 1;
+            state.output = Some(parse_tree_output(argv, next)?);
+            return Ok(next);
+        }
+        "--format" | "-f" => {
+            let next = idx + 1;
+            let value = parse_string(argv, next, arg)?;
+            if arg == "--format" || arg == "-f" {
+                state.output = Some(parse_format_value(value)?);
+            }
+            return Ok(next);
+        }
+        token if token.starts_with('-') => {}
+        token => state.path.push(token.to_string()),
+    }
+    Ok(idx)
 }
 
 #[derive(Default)]
@@ -152,7 +176,8 @@ fn parse_string(argv: &[String], idx: usize, arg: &str) -> Result<String, String
 
 fn parse_usize(argv: &[String], idx: usize, arg: &str) -> Result<usize, String> {
     let value = parse_string(argv, idx, arg)?;
-    value.parse::<usize>()
+    value
+        .parse::<usize>()
         .map_err(|_| format!("Invalid value for '{arg}': {value}"))
 }
 
@@ -172,10 +197,37 @@ fn parse_format_value(value: String) -> Result<HelpTreeOutputFormat, String> {
     }
 }
 
-/// Run help-tree rooted at the command identified by `requested_path`.
+/// Generate the JSON help-tree for the command identified by `requested_path`.
 ///
 /// `CF` is your clap `CommandFactory` derive (usually the top-level CLI struct).
 /// An empty `requested_path` renders the full tree from the root.
+///
+/// This is the pure function used by `run_for_path` and by tests.
+pub fn generate_json_for_path<CF: CommandFactory>(
+    opts: &HelpTreeOpts,
+    requested_path: &[String],
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let mut cmd = CF::command();
+    cmd.build();
+
+    let (selected, _resolved_path) = select_command_by_path(&cmd, requested_path);
+
+    let ignore: HashSet<String> = opts.ignore.iter().cloned().collect();
+    let omit_help_tree_discovery_flags = !requested_path.is_empty();
+
+    command_to_json(
+        selected,
+        &ignore,
+        opts.tree_all,
+        opts.depth_limit,
+        0,
+        omit_help_tree_discovery_flags,
+    )
+}
+
+/// Run help-tree rooted at the command identified by `requested_path`.
+///
+/// Prints the result to stdout.
 pub fn run_for_path<CF: CommandFactory>(
     opts: HelpTreeOpts,
     requested_path: &[String],
@@ -183,24 +235,14 @@ pub fn run_for_path<CF: CommandFactory>(
     let mut cmd = CF::command();
     cmd.build();
 
-    let (selected, _resolved_path) = select_command_by_path(&cmd, requested_path);
-
-    let ignore: HashSet<String> = opts.ignore.iter().cloned().collect();
-
     match opts.output {
         HelpTreeOutputFormat::Json => {
-            let omit_help_tree_discovery_flags = !requested_path.is_empty();
-            let value = command_to_json(
-                selected,
-                &ignore,
-                opts.tree_all,
-                opts.depth_limit,
-                0,
-                omit_help_tree_discovery_flags,
-            )?;
+            let value = generate_json_for_path::<CF>(&opts, requested_path)?;
             println!("{}", serde_json::to_string_pretty(&value)?);
         }
         HelpTreeOutputFormat::Text => {
+            let (selected, _resolved_path) = select_command_by_path(&cmd, requested_path);
+            let ignore: HashSet<String> = opts.ignore.iter().cloned().collect();
             println!(
                 "{}",
                 command_to_text(selected, &ignore, opts.tree_all, opts.depth_limit, 0)
@@ -278,7 +320,15 @@ fn render_command_text(
     for (i, sub) in children.iter().enumerate() {
         let is_last = i == children.len() - 1;
         let next_prefix = next_tree_prefix(prefix, depth, is_last);
-        render_command_text(sub, ignore, tree_all, depth_limit, depth + 1, lines, &next_prefix);
+        render_command_text(
+            sub,
+            ignore,
+            tree_all,
+            depth_limit,
+            depth + 1,
+            lines,
+            &next_prefix,
+        );
     }
 }
 
@@ -338,13 +388,23 @@ fn command_to_json(
     let mut map = serde_json::Map::new();
     map.insert("name".to_string(), json!(cmd.get_name()));
     map.insert("type".to_string(), json!("command"));
-    map.insert("description".to_string(), json!(cmd.get_about().map(|a| a.to_string()).unwrap_or_default()));
+    map.insert(
+        "description".to_string(),
+        json!(cmd.get_about().map(|a| a.to_string()).unwrap_or_default()),
+    );
 
     let (args, opts) = collect_args_and_opts(cmd, omit_help_tree_flags);
     insert_if_not_empty(&mut map, "arguments", args);
     insert_if_not_empty(&mut map, "options", opts);
 
-    let subcommands = collect_subcommands(cmd, ignore, tree_all, depth_limit, depth, omit_help_tree_flags)?;
+    let subcommands = collect_subcommands(
+        cmd,
+        ignore,
+        tree_all,
+        depth_limit,
+        depth,
+        omit_help_tree_flags,
+    )?;
     insert_if_not_empty(&mut map, "subcommands", subcommands);
 
     Ok(Value::Object(map))
@@ -464,7 +524,11 @@ mod tests {
 
     #[test]
     fn test_parse_help_tree_json() {
-        let args = vec!["--help-tree".to_string(), "-f".to_string(), "json".to_string()];
+        let args = vec![
+            "--help-tree".to_string(),
+            "-f".to_string(),
+            "json".to_string(),
+        ];
         let result = parse_help_tree_invocation(&args).unwrap().unwrap();
         assert_eq!(result.opts.output, HelpTreeOutputFormat::Json);
     }
@@ -480,7 +544,8 @@ mod tests {
     fn test_parse_help_tree_ignore() {
         let args = vec![
             "--help-tree".to_string(),
-            "-I".to_string(), "help".to_string(),
+            "-I".to_string(),
+            "help".to_string(),
         ];
         let result = parse_help_tree_invocation(&args).unwrap().unwrap();
         assert_eq!(result.opts.ignore, vec!["help"]);
@@ -491,7 +556,8 @@ mod tests {
         let args = vec![
             "--help-tree".to_string(),
             "-a".to_string(),
-            "--tree-output".to_string(), "json".to_string(),
+            "--tree-output".to_string(),
+            "json".to_string(),
         ];
         let result = parse_help_tree_invocation(&args).unwrap().unwrap();
         assert!(result.opts.tree_all);
@@ -500,17 +566,18 @@ mod tests {
 
     #[test]
     fn test_parse_help_tree_path() {
-        let args = vec![
-            "navigate".to_string(),
-            "--help-tree".to_string(),
-        ];
+        let args = vec!["navigate".to_string(), "--help-tree".to_string()];
         let result = parse_help_tree_invocation(&args).unwrap().unwrap();
         assert_eq!(result.path, vec!["navigate"]);
     }
 
     #[test]
     fn test_parse_invalid_depth() {
-        let args = vec!["--help-tree".to_string(), "-L".to_string(), "abc".to_string()];
+        let args = vec![
+            "--help-tree".to_string(),
+            "-L".to_string(),
+            "abc".to_string(),
+        ];
         assert!(parse_help_tree_invocation(&args).is_err());
     }
 
@@ -540,7 +607,12 @@ mod tests {
         use clap::{Arg, Command};
         let cmd = Command::new("test")
             .arg(Arg::new("url").help("Target URL").required(true))
-            .arg(Arg::new("verbose").short('v').long("verbose").help("Be verbose"));
+            .arg(
+                Arg::new("verbose")
+                    .short('v')
+                    .long("verbose")
+                    .help("Be verbose"),
+            );
         let value = command_to_json(&cmd, &HashSet::new(), false, None, 0, false).unwrap();
         let args = value["arguments"].as_array().unwrap();
         assert_eq!(args.len(), 1);
@@ -555,8 +627,7 @@ mod tests {
     #[test]
     fn test_command_to_json_with_subcommands() {
         use clap::Command;
-        let cmd = Command::new("parent")
-            .subcommand(Command::new("child").about("Child cmd"));
+        let cmd = Command::new("parent").subcommand(Command::new("child").about("Child cmd"));
         let value = command_to_json(&cmd, &HashSet::new(), false, None, 0, false).unwrap();
         let subs = value["subcommands"].as_array().unwrap();
         assert_eq!(subs.len(), 1);
@@ -566,8 +637,7 @@ mod tests {
     #[test]
     fn test_command_to_json_depth_limit() {
         use clap::Command;
-        let cmd = Command::new("parent")
-            .subcommand(Command::new("child").about("Child cmd"));
+        let cmd = Command::new("parent").subcommand(Command::new("child").about("Child cmd"));
         let value = command_to_json(&cmd, &HashSet::new(), false, Some(0), 0, false).unwrap();
         assert!(value.get("subcommands").is_none());
     }
@@ -575,8 +645,7 @@ mod tests {
     #[test]
     fn test_command_to_json_omit_flags() {
         use clap::{Arg, Command};
-        let cmd = Command::new("test")
-            .arg(Arg::new("tree_depth").long("tree-depth"));
+        let cmd = Command::new("test").arg(Arg::new("tree_depth").long("tree-depth"));
         let value = command_to_json(&cmd, &HashSet::new(), false, None, 0, true).unwrap();
         assert!(value.get("options").is_none());
     }

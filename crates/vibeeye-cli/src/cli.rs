@@ -11,6 +11,10 @@ pub struct Cli {
     #[command(flatten)]
     pub help_tree: crate::help_tree::HelpTreeArgs,
 
+    /// Enable verbose debug logging
+    #[arg(short, long)]
+    pub verbose: bool,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }

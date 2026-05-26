@@ -24,6 +24,7 @@ schemars = { workspace = true }
 servo = { workspace = true }
 url = { workspace = true }
 dpi = { workspace = true }
+rustls = { workspace = true }
 
 # MCP SDK
 rust-mcp-sdk = { workspace = true }
@@ -40,6 +41,7 @@ tracing = { workspace = true }
 pulldown-cmark = { workspace = true }
 pulldown-cmark-to-cmark = { workspace = true }
 scraper = { workspace = true }
+html-to-markdown-rs = { workspace = true }
 
 [dev-dependencies]
 mockall = { workspace = true }

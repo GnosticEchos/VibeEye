@@ -3,13 +3,13 @@ mod tools;
 
 use handler::VibeEyeMcpHandler;
 use rust_mcp_sdk::{
+    McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
     error::SdkResult,
-    mcp_server::{server_runtime, McpServerOptions, ServerRuntime},
+    mcp_server::{McpServerOptions, ServerRuntime, server_runtime},
     schema::{
         Implementation, InitializeResult, ProtocolVersion, ServerCapabilities,
         ServerCapabilitiesTools,
     },
-    McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
 };
 use std::sync::Arc;
 use tracing::info;

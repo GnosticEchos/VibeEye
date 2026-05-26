@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::rc::Rc;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 
@@ -9,16 +9,15 @@ use std::time::Duration;
 static SERVO_POSSIBLE: Mutex<bool> = Mutex::new(true);
 
 use servo::{
-    EventLoopWaker, Preferences, Servo, ServoBuilder, WebView, WebViewBuilder,
-    WebViewDelegate,
+    EventLoopWaker, Preferences, Servo, ServoBuilder, WebView, WebViewBuilder, WebViewDelegate,
 };
 use servo::{RenderingContext, SoftwareRenderingContext};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, warn};
 use url::Url;
 
-use vibeeye_core::{Viewport, VibeError};
 use crate::{AppError, Result};
+use vibeeye_core::{VibeError, Viewport};
 
 /// Commands sent from the async `BrowserSession` to the dedicated Servo thread.
 pub(crate) enum EngineCommand {
@@ -42,7 +41,7 @@ pub(crate) enum EngineCommand {
 /// methods that bridge to the thread via channels.
 pub struct ServoEngine {
     cmd_tx: mpsc::Sender<EngineCommand>,
-    _thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl ServoEngine {
@@ -67,19 +66,10 @@ impl ServoEngine {
             })
             .map_err(|e| VibeError::Engine(format!("failed to spawn engine thread: {e}")))?;
 
-        match ready_rx.recv_timeout(Duration::from_secs(5)) {
-            Ok(Ok(())) => Ok(ServoEngine { cmd_tx, _thread: thread }),
-            Ok(Err(e)) => {
-                *possible = false;
-                Err(AppError::Core(VibeError::Engine(format!("engine init failed: {e}"))))
-            }
-            Err(_) => {
-                *possible = false;
-                Err(AppError::Core(VibeError::Engine(
-                    "engine init timed out (no Mesa / display available?)".to_string(),
-                )))
-            }
-        }
+        await_ready(ready_rx, &mut possible).map(|()| ServoEngine {
+            cmd_tx,
+            thread: Some(thread),
+        })
     }
 
     /// Navigate to `url`, wait for load to complete, and return the final URL.
@@ -115,15 +105,51 @@ impl ServoEngine {
             .map_err(|e| VibeError::Engine(format!("recv get_text: {e}")))?
     }
 
-    /// Gracefully shut down the engine thread.
-    pub fn shutdown(&self) {
+    /// Gracefully shut down the engine thread and wait for it to finish.
+    pub fn shutdown(&mut self) {
         let _ = self.cmd_tx.send(EngineCommand::Shutdown);
+        if let Some(thread) = self.thread.take() {
+            // Poll with a 10 s timeout so we don't hang forever if Servo's
+            // C++ background threads deadlock during teardown.
+            let start = std::time::Instant::now();
+            while !thread.is_finished() {
+                if start.elapsed() > Duration::from_secs(10) {
+                    warn!("Servo engine shutdown timed out (thread still running)");
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let _ = thread.join();
+            debug!("Servo engine shutdown complete");
+        }
     }
 }
 
 impl Drop for ServoEngine {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+/// Block until the engine thread signals it is ready or times out.
+fn await_ready(
+    ready_rx: mpsc::Receiver<std::result::Result<(), String>>,
+    possible: &mut bool,
+) -> Result<()> {
+    match ready_rx.recv_timeout(Duration::from_secs(5)) {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            *possible = false;
+            Err(AppError::Core(VibeError::Engine(format!(
+                "engine init failed: {e}"
+            ))))
+        }
+        Err(_) => {
+            *possible = false;
+            Err(AppError::Core(VibeError::Engine(
+                "engine init timed out (no Mesa / display available?)".to_string(),
+            )))
+        }
     }
 }
 
@@ -153,6 +179,11 @@ fn run_engine(
         ..Preferences::default()
     };
 
+    // Servo's networking stack uses rustls for HTTPS.  rustls 0.23+
+    // requires an explicit process-level CryptoProvider installation.
+    // We use `ring` and ignore the error if already installed.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     let user_event_triggered = Arc::new(AtomicBool::new(false));
     let waker = Box::new(EventLoopWakerImpl(user_event_triggered));
 
@@ -164,7 +195,9 @@ fn run_engine(
     info!("Servo engine initialized");
 
     if ready.send(Ok(())).is_err() {
-        return Err(AppError::Core(VibeError::Engine("parent dropped before ready".to_string())));
+        return Err(AppError::Core(VibeError::Engine(
+            "parent dropped before ready".to_string(),
+        )));
     }
 
     let mut active_webview: Option<WebView> = None;
@@ -173,28 +206,50 @@ fn run_engine(
         servo.spin_event_loop();
 
         while let Ok(cmd) = cmd_rx.try_recv() {
-            match cmd {
-                EngineCommand::Navigate { url, respond } => {
-                    let result = navigate_cmd(&servo, rendering_context.clone(), &mut active_webview, &url);
-                    let _ = respond.send(result);
-                }
-                EngineCommand::GetHtml { respond } => {
-                    let result = get_html_cmd(&servo, &active_webview);
-                    let _ = respond.send(result);
-                }
-                EngineCommand::GetText { respond } => {
-                    let result = get_text_cmd(&servo, &active_webview);
-                    let _ = respond.send(result);
-                }
-                EngineCommand::Shutdown => {
-                    debug!("Servo engine received shutdown");
-                    drop(active_webview);
-                    return Ok(());
-                }
+            if !handle_command(&servo, cmd, &mut active_webview, &rendering_context) {
+                return Ok(());
             }
         }
 
         std::thread::yield_now();
+    }
+}
+
+/// Dispatch a single engine command.
+/// Returns `true` to keep the loop running, `false` if the engine should shut down.
+fn handle_command(
+    servo: &Servo,
+    cmd: EngineCommand,
+    active_webview: &mut Option<WebView>,
+    rendering_context: &Rc<dyn RenderingContext>,
+) -> bool {
+    match cmd {
+        EngineCommand::Navigate { url, respond } => {
+            let result = navigate_cmd(servo, rendering_context.clone(), active_webview, &url);
+            let _ = respond.send(result);
+            true
+        }
+        EngineCommand::GetHtml { respond } => {
+            let result = get_html_cmd(servo, active_webview);
+            let _ = respond.send(result);
+            true
+        }
+        EngineCommand::GetText { respond } => {
+            let result = get_text_cmd(servo, active_webview);
+            let _ = respond.send(result);
+            true
+        }
+        EngineCommand::Shutdown => {
+            debug!("Servo engine received shutdown");
+            drop(active_webview.take());
+            // Give Servo time to tear down internal C++ threads
+            // (ResourceManager, FetchThread, SpiderMonkey, …).
+            for _ in 0..200 {
+                servo.spin_event_loop();
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            false
+        }
     }
 }
 
@@ -204,8 +259,7 @@ fn navigate_cmd(
     active_webview: &mut Option<WebView>,
     url: &str,
 ) -> Result<String> {
-    let parsed = Url::parse(url)
-        .map_err(|e| VibeError::Navigation(format!("invalid URL: {e}")))?;
+    let parsed = Url::parse(url).map_err(|e| VibeError::Navigation(format!("invalid URL: {e}")))?;
 
     let delegate = Rc::new(HeadlessWebViewDelegate);
 
@@ -214,8 +268,15 @@ fn navigate_cmd(
         .delegate(delegate)
         .build();
 
-    // Wait for load to complete
+    // Wait for load to complete, but cap at 15 s so sites with
+    // never-ending ads / trackers / analytics don’t hang forever.
+    let start = std::time::Instant::now();
+    let timeout = Duration::from_secs(15);
     while webview.load_status() != servo::LoadStatus::Complete {
+        if start.elapsed() > timeout {
+            warn!(%url, "page load timed out, proceeding with partial content");
+            break;
+        }
         servo.spin_event_loop();
         std::thread::yield_now();
     }

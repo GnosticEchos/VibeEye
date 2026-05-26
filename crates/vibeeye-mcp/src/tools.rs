@@ -1,7 +1,10 @@
-use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
+use rust_mcp_sdk::macros::{JsonSchema, mcp_tool};
 use serde::{Deserialize, Serialize};
 
-#[mcp_tool(name = "browser_navigate", description = "Navigate to a URL and load the page")]
+#[mcp_tool(
+    name = "browser_navigate",
+    description = "Navigate to a URL and load the page"
+)]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct NavigateTool {
     /// URL to navigate to
