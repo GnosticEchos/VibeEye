@@ -4,6 +4,8 @@
 //! and the SonarDiscovery trait for CLI/MCP parity.
 
 pub mod browser;
+pub mod config;
+pub mod crawl;
 pub mod discovery;
 pub mod error;
 pub mod extraction;

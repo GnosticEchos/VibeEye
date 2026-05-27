@@ -43,6 +43,12 @@ pulldown-cmark-to-cmark = { workspace = true }
 scraper = { workspace = true }
 html-to-markdown-rs = { workspace = true }
 
+# Crawl support
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+quick-xml = { version = "0.37", features = ["serialize"] }
+toml = "0.8"
+dirs = "6"
+
 [dev-dependencies]
 mockall = { workspace = true }
 tempfile = { workspace = true }

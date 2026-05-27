@@ -66,25 +66,13 @@ fn cli_help_tree_matches_tool_registry() {
         ("extract", "browser_extract"),
     ];
 
-    assert_eq!(
-        cli_tools.len(),
-        mapping.len(),
-        "CLI should expose exactly {} subcommands",
-        mapping.len()
-    );
-    assert_eq!(
-        app_tools_map.len(),
-        mapping.len(),
-        "ToolRegistry should contain exactly {} tools",
-        mapping.len()
-    );
-
-    for (cli_name, app_name) in mapping {
+    // Verify all mapped CLI subcommands exist (allow extra CLI-only commands like crawl)
+    for (cli_name, app_name) in &mapping {
         let cli_desc = cli_tools
-            .get(cli_name)
+            .get(*cli_name)
             .unwrap_or_else(|| panic!("CLI missing subcommand: {cli_name}"));
         let app_desc = app_tools_map
-            .get(app_name)
+            .get(*app_name)
             .unwrap_or_else(|| panic!("ToolRegistry missing tool: {app_name}"));
 
         // Descriptions should be semantically aligned (not necessarily identical,
@@ -95,4 +83,12 @@ fn cli_help_tree_matches_tool_registry() {
             "Description mismatch for '{cli_name}' → '{app_name}': CLI='{cli_desc}', APP='{app_desc}'"
         );
     }
+
+    // ToolRegistry should contain exactly the mapped tools (no orphaned MCP tools)
+    assert_eq!(
+        app_tools_map.len(),
+        mapping.len(),
+        "ToolRegistry should contain exactly {} tools",
+        mapping.len()
+    );
 }

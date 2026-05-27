@@ -1,6 +1,7 @@
 //! CLI argument parsing for vibe-eye
 
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 /// VibeEye - Headless browser for agentic content extraction
 #[derive(Parser, Debug)]
@@ -41,5 +42,55 @@ pub enum Commands {
         /// Output format: markdown, html, or text
         #[arg(short, long, default_value = "markdown")]
         format: String,
+    },
+
+    /// BFS crawl a website starting from a seed URL
+    Crawl {
+        /// Seed URL to start crawling from
+        url: String,
+
+        /// Path to a custom TOML config file
+        #[arg(long, value_name = "FILE")]
+        config: Option<PathBuf>,
+
+        /// Maximum crawl depth
+        #[arg(long)]
+        max_depth: Option<u32>,
+
+        /// Maximum pages to crawl
+        #[arg(long)]
+        max_pages: Option<usize>,
+
+        /// Output format: markdown, html, or text
+        #[arg(short, long)]
+        format: Option<String>,
+
+        /// Directory to write per-page files (JSON Lines to stdout if omitted)
+        #[arg(short, long, value_name = "DIR")]
+        output: Option<PathBuf>,
+
+        /// Respect robots.txt
+        #[arg(long)]
+        respect_robots: Option<bool>,
+
+        /// Requests per second per host
+        #[arg(long)]
+        requests_per_second: Option<f64>,
+
+        /// Maximum concurrent fetches
+        #[arg(long)]
+        concurrency: Option<usize>,
+
+        /// Restrict to same origin
+        #[arg(long)]
+        same_origin: Option<bool>,
+
+        /// Per-page timeout in seconds
+        #[arg(long)]
+        timeout: Option<u64>,
+
+        /// Pre-seed from sitemap.xml
+        #[arg(long)]
+        sitemap: Option<bool>,
     },
 }
