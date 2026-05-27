@@ -382,11 +382,284 @@ async fn write_manifest(dir: &std::path::Path, manifest: &[serde_json::Value]) -
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::VecDeque;
 
     #[test]
     fn test_format_name() {
         assert_eq!(format_name(&ContentFormat::Markdown), "markdown");
         assert_eq!(format_name(&ContentFormat::Html), "html");
         assert_eq!(format_name(&ContentFormat::Text), "text");
+    }
+
+    #[test]
+    fn test_file_extension() {
+        assert_eq!(file_extension(&ContentFormat::Markdown), "md");
+        assert_eq!(file_extension(&ContentFormat::Html), "html");
+        assert_eq!(file_extension(&ContentFormat::Text), "txt");
+    }
+
+    #[test]
+    fn test_should_crawl_page_depth_limit() {
+        let robots = robots::RobotsTxt::default();
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        assert!(should_crawl_page(0, "https://example.com/", &robots, &opts));
+        assert!(should_crawl_page(2, "https://example.com/", &robots, &opts));
+        assert!(!should_crawl_page(3, "https://example.com/", &robots, &opts));
+    }
+
+    #[test]
+    fn test_should_crawl_page_respects_robots() {
+        let robots = robots::RobotsTxt::parse("User-agent: *\nDisallow: /private/\n");
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: true,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        assert!(should_crawl_page(0, "https://example.com/public", &robots, &opts));
+        assert!(!should_crawl_page(0, "https://example.com/private/page", &robots, &opts));
+    }
+
+    #[test]
+    fn test_enqueue_discovered_adds_links() {
+        let html = r#"
+            <html><body>
+            <a href="/page1">Page 1</a>
+            <a href="/page2">Page 2</a>
+            <a href="https://other.com/page">External</a>
+            </body></html>
+        "#;
+        let base_url = Url::parse("https://example.com").unwrap();
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        visited.insert("https://example.com/".to_string());
+
+        enqueue_discovered(html, 0, &base_url, &opts, &mut visited, &mut queue);
+
+        // Two internal links should be enqueued
+        assert_eq!(queue.len(), 2);
+        let urls: Vec<_> = queue.iter().map(|(u, _)| u.as_str()).collect();
+        assert!(urls.contains(&"https://example.com/page1"));
+        assert!(urls.contains(&"https://example.com/page2"));
+        // External link should be skipped due to same_origin=true
+        assert!(!urls.contains(&"https://other.com/page"));
+    }
+
+    #[test]
+    fn test_enqueue_discovered_allows_external_when_same_origin_false() {
+        let html = r#"
+            <html><body>
+            <a href="https://other.com/page">External</a>
+            </body></html>
+        "#;
+        let base_url = Url::parse("https://example.com").unwrap();
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: false,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        visited.insert("https://example.com/".to_string());
+
+        enqueue_discovered(html, 0, &base_url, &opts, &mut visited, &mut queue);
+
+        assert_eq!(queue.len(), 1);
+        assert_eq!(queue[0].0, "https://other.com/page");
+    }
+
+    #[test]
+    fn test_enqueue_discovered_respects_max_depth() {
+        let html = r#"<html><body><a href="/page1">Page 1</a></body></html>"#;
+        let base_url = Url::parse("https://example.com").unwrap();
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        visited.insert("https://example.com/".to_string());
+
+        // At depth == max_depth, no new links should be enqueued
+        enqueue_discovered(html, 2, &base_url, &opts, &mut visited, &mut queue);
+        assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn test_enqueue_discovered_deduplicates() {
+        let html = r#"
+            <html><body>
+            <a href="/page1">Page 1</a>
+            <a href="/page1">Page 1 again</a>
+            </body></html>
+        "#;
+        let base_url = Url::parse("https://example.com").unwrap();
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        visited.insert("https://example.com/".to_string());
+
+        enqueue_discovered(html, 0, &base_url, &opts, &mut visited, &mut queue);
+
+        // Same link twice should only enqueue once
+        assert_eq!(queue.len(), 1);
+    }
+
+    #[test]
+    fn test_error_result_format() {
+        let err = crate::AppError::Navigation("timeout".to_string());
+        let result = error_result("https://example.com/", 1, &ContentFormat::Markdown, &err);
+        assert_eq!(result.url, "https://example.com/");
+        assert_eq!(result.depth, 1);
+        assert_eq!(result.format, "markdown");
+        assert!(result.error.is_some());
+        assert!(result.content.is_empty());
+        assert_eq!(result.links_found, 0);
+    }
+
+    #[tokio::test]
+    async fn test_write_to_directory_creates_files() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let output_dir = temp_dir.path().join("output");
+
+        let results = vec![
+            CrawlResult {
+                url: "https://example.com/".to_string(),
+                depth: 0,
+                content: "page 1 content".to_string(),
+                format: "md".to_string(),
+                title: Some("Page 1".to_string()),
+                links_found: 2,
+                error: None,
+            },
+            CrawlResult {
+                url: "https://example.com/page2".to_string(),
+                depth: 1,
+                content: "page 2 content".to_string(),
+                format: "md".to_string(),
+                title: Some("Page 2".to_string()),
+                links_found: 0,
+                error: None,
+            },
+        ];
+
+        write_to_directory(&output_dir, &results, "md").await.unwrap();
+
+        assert!(output_dir.exists());
+        assert!(output_dir.join("0001.md").exists());
+        assert!(output_dir.join("0002.md").exists());
+        assert!(output_dir.join("manifest.json").exists());
+
+        let content = std::fs::read_to_string(output_dir.join("0001.md")).unwrap();
+        assert_eq!(content, "page 1 content");
+
+        let manifest = std::fs::read_to_string(output_dir.join("manifest.json")).unwrap();
+        let manifest_json: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+        let arr = manifest_json.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["url"], "https://example.com/");
+        assert_eq!(arr[1]["url"], "https://example.com/page2");
+    }
+
+    #[test]
+    fn test_build_queue_without_sitemap() {
+        let opts = CrawlOptions {
+            url: "https://example.com".to_string(),
+            max_depth: 2,
+            max_pages: 10,
+            format: ContentFormat::Markdown,
+            respect_robots: false,
+            requests_per_second: 100.0,
+            concurrency: 1,
+            same_origin: true,
+            timeout_secs: 5,
+            use_sitemap: false,
+            output_dir: None,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let (queue, visited) = rt.block_on(async { build_queue(&opts, "https://example.com").await });
+
+        assert_eq!(queue.len(), 1);
+        assert_eq!(queue[0].0, "https://example.com/");
+        assert_eq!(queue[0].1, 0);
+        assert!(visited.contains("https://example.com/"));
+    }
+
+    #[test]
+    fn test_extract_and_build_success() {
+        let capture = PageCapture {
+            url: "https://example.com/".to_string(),
+            html: "<html><head><title>Test Page</title></head><body>Hello</body></html>".to_string(),
+            title: Some("Test Page".to_string()),
+        };
+
+        let result = extract_and_build("https://example.com/", 0, capture, ContentFormat::Markdown);
+        assert_eq!(result.url, "https://example.com/");
+        assert_eq!(result.depth, 0);
+        assert_eq!(result.title, Some("Test Page".to_string()));
+        assert!(result.error.is_none());
+        assert_eq!(result.format, "markdown");
     }
 }

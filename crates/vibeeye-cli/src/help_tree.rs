@@ -777,4 +777,67 @@ mod tests {
         insert_if_not_empty(&mut map, "key", vec![json!("value")]);
         assert!(map.get("key").is_some());
     }
+
+    #[test]
+    fn test_format_flag_line_short_and_long() {
+        use clap::{Arg, Command};
+        let cmd = Command::new("test").arg(
+            Arg::new("verbose")
+                .short('v')
+                .long("verbose")
+                .help("Be verbose"),
+        );
+        let arg = cmd.get_arguments().next().unwrap();
+        let line = format_flag_line(arg, "");
+        assert!(line.contains("-v"));
+        assert!(line.contains("--verbose"));
+        assert!(line.contains("Be verbose"));
+    }
+
+    #[test]
+    fn test_format_flag_line_long_only() {
+        use clap::{Arg, Command};
+        let cmd = Command::new("test").arg(
+            Arg::new("output")
+                .long("output")
+                .help("Output path"),
+        );
+        let arg = cmd.get_arguments().next().unwrap();
+        let line = format_flag_line(arg, "");
+        // Tree prefix contains dashes, so just assert short flag not present as "-o "
+        assert!(!line.contains("-o, "));
+        assert!(line.contains("--output"));
+        assert!(line.contains("Output path"));
+    }
+
+    #[test]
+    fn test_format_flag_line_with_value_hint() {
+        use clap::{Arg, Command, ValueHint};
+        let cmd = Command::new("test").arg(
+            Arg::new("config")
+                .long("config")
+                .help("Config file")
+                .value_hint(ValueHint::FilePath)
+                .value_name("FILE")
+                .num_args(1),
+        );
+        let arg = cmd.get_arguments().next().unwrap();
+        let line = format_flag_line(arg, "");
+        assert!(line.contains("--config"));
+        assert!(line.contains("<")); // value placeholder
+        assert!(line.contains("Config file"));
+    }
+
+    #[test]
+    fn test_format_flag_line_id_fallback() {
+        use clap::{Arg, Command};
+        let cmd = Command::new("test").arg(
+            Arg::new("my-flag")
+                .help("A custom flag without short/long"),
+        );
+        let arg = cmd.get_arguments().next().unwrap();
+        let line = format_flag_line(arg, "");
+        assert!(line.contains("my-flag"));
+        assert!(line.contains("A custom flag without short/long"));
+    }
 }
