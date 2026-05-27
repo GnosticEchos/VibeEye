@@ -113,35 +113,77 @@ fn process_one_arg(
 ) -> Result<usize, String> {
     let arg = &argv[idx];
     match arg.as_str() {
-        "--help-tree" => state.help_tree = true,
+        "--help-tree" => {
+            state.help_tree = true;
+            Ok(idx)
+        }
         "--tree-depth" | "-L" => {
-            let next = idx + 1;
-            state.depth_limit = Some(parse_usize(argv, next, arg)?);
-            return Ok(next);
+            parse_usize_arg(state, argv, idx, arg, |s, v| s.depth_limit = Some(v))
         }
         "--tree-ignore" | "-I" => {
-            let next = idx + 1;
-            state.ignore.push(parse_string(argv, next, arg)?);
-            return Ok(next);
+            parse_string_arg(state, argv, idx, arg, |s, v| s.ignore.push(v))
         }
-        "--tree-all" | "-a" => state.tree_all = true,
-        "--tree-output" => {
-            let next = idx + 1;
-            state.output = Some(parse_tree_output(argv, next)?);
-            return Ok(next);
+        "--tree-all" | "-a" => {
+            state.tree_all = true;
+            Ok(idx)
         }
-        "--format" | "-f" => {
-            let next = idx + 1;
-            let value = parse_string(argv, next, arg)?;
-            if arg == "--format" || arg == "-f" {
-                state.output = Some(parse_format_value(value)?);
-            }
-            return Ok(next);
+        "--tree-output" => parse_tree_output_arg(state, argv, idx),
+        "--format" | "-f" => parse_format_arg(state, argv, idx, arg),
+        token if token.starts_with('-') => Ok(idx),
+        token => {
+            state.path.push(token.to_string());
+            Ok(idx)
         }
-        token if token.starts_with('-') => {}
-        token => state.path.push(token.to_string()),
     }
-    Ok(idx)
+}
+
+fn parse_usize_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+    setter: impl FnOnce(&mut ParseState, usize),
+) -> Result<usize, String> {
+    let next = idx + 1;
+    let value = parse_usize(argv, next, arg)?;
+    setter(state, value);
+    Ok(next)
+}
+
+fn parse_string_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+    setter: impl FnOnce(&mut ParseState, String),
+) -> Result<usize, String> {
+    let next = idx + 1;
+    let value = parse_string(argv, next, arg)?;
+    setter(state, value);
+    Ok(next)
+}
+
+fn parse_tree_output_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+) -> Result<usize, String> {
+    let next = idx + 1;
+    let value = parse_tree_output(argv, next)?;
+    state.output = Some(value);
+    Ok(next)
+}
+
+fn parse_format_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let next = idx + 1;
+    let value = parse_string(argv, next, arg)?;
+    state.output = Some(parse_format_value(value)?);
+    Ok(next)
 }
 
 #[derive(Default)]
@@ -311,14 +353,33 @@ fn render_command_text(
 
     lines.push(format_command_line(cmd, prefix, depth));
 
-    let children: Vec<_> = cmd
+    let flags: Vec<_> = cmd
+        .get_arguments()
+        .filter(|a| !a.is_positional())
+        .filter(|a| {
+            let id = a.get_id().as_str();
+            id != "help" && id != "version"
+        })
+        .collect();
+
+    let subcommands: Vec<_> = cmd
         .get_subcommands()
         .filter(|sub| tree_all || !sub.is_hide_set())
         .filter(|sub| !ignore.contains(sub.get_name()))
+        .filter(|sub| sub.get_name() != "help")
         .collect();
 
-    for (i, sub) in children.iter().enumerate() {
-        let is_last = i == children.len() - 1;
+    let total_children = flags.len() + subcommands.len();
+
+    for (i, arg) in flags.iter().enumerate() {
+        let is_last = i == total_children - 1;
+        let next_prefix = next_tree_prefix(prefix, depth, is_last);
+        lines.push(format_flag_line(arg, &next_prefix));
+    }
+
+    for (i, sub) in subcommands.iter().enumerate() {
+        let idx = flags.len() + i;
+        let is_last = idx == total_children - 1;
         let next_prefix = next_tree_prefix(prefix, depth, is_last);
         render_command_text(
             sub,
@@ -348,12 +409,41 @@ fn format_command_line(cmd: &Command, prefix: &str, depth: usize) -> String {
         line.push_str(&arg_names.join(" "));
     }
 
-    let has_flags = cmd.get_arguments().any(|arg| !arg.is_positional());
-    if has_flags {
-        line.push_str(" [flags]");
+    let desc = cmd.get_about().map(|a| a.to_string()).unwrap_or_default();
+    pad_and_append_description(&mut line, &desc);
+    line
+}
+
+fn format_flag_line(arg: &clap::Arg, prefix: &str) -> String {
+    let mut line = prefix.to_string();
+    line.push_str("├── ");
+
+    let mut parts = Vec::new();
+    if let Some(short) = arg.get_short() {
+        parts.push(format!("-{short}"));
+    }
+    if let Some(long) = arg.get_long() {
+        parts.push(format!("--{long}"));
+    }
+    if parts.is_empty() {
+        parts.push(arg.get_id().to_string());
     }
 
-    let desc = cmd.get_about().map(|a| a.to_string()).unwrap_or_default();
+    line.push_str(&parts.join(", "));
+
+    let value_names = arg.get_value_names();
+    let has_value = arg.get_value_hint() != clap::ValueHint::Unknown
+        || arg.get_num_args().is_some_and(|n| n.min_values() > 0);
+    if has_value {
+        if let Some(names) = value_names {
+            if let Some(name) = names.iter().next() {
+                line.push(' ');
+                line.push_str(&format!("<{name}>"));
+            }
+        }
+    }
+
+    let desc = arg.get_help().map(|h| h.to_string()).unwrap_or_default();
     pad_and_append_description(&mut line, &desc);
     line
 }
