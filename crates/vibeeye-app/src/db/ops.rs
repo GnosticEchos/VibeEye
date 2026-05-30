@@ -275,15 +275,15 @@ impl DbClient {
         bm25_limit: usize,
         knn_limit: usize,
     ) -> Result<Vec<crate::db::models::HybridResult>> {
-        let (candidate_ids, bm25_scores) =
+        let (candidate_urls, bm25_scores) =
             self.bm25_candidates(group, text_query, bm25_limit).await?;
 
-        if candidate_ids.is_empty() {
+        if candidate_urls.is_empty() {
             return Ok(Vec::new());
         }
 
         let raw = self
-            .vector_chunk_query(group, query_embedding, knn_limit, Some(candidate_ids))
+            .vector_chunk_query(group, query_embedding, knn_limit, Some(candidate_urls))
             .await?;
 
         self.assemble_hybrid_results(group, raw, &bm25_scores).await
@@ -337,14 +337,14 @@ impl DbClient {
         Ok(results)
     }
 
-    /// BM25 pre-filter: return page RecordIds and a URL → score map.
+    /// BM25 pre-filter: return candidate page URLs and a URL → score map.
     async fn bm25_candidates(
         &self,
         group: Option<&str>,
         text_query: &str,
         limit: usize,
     ) -> Result<(
-        Vec<surrealdb::types::RecordId>,
+        Vec<String>,
         std::collections::HashMap<String, f64>,
     )> {
         let raw = self.run_bm25_query(group, text_query, limit).await?;
@@ -381,22 +381,20 @@ impl DbClient {
     fn parse_bm25_rows(
         raw: Vec<serde_json::Value>,
     ) -> (
-        Vec<surrealdb::types::RecordId>,
+        Vec<String>,
         std::collections::HashMap<String, f64>,
     ) {
-        let mut ids = Vec::new();
+        let mut urls = Vec::new();
         let mut scores = std::collections::HashMap::new();
         for v in raw {
-            if let Some(id_str) = v["id"].as_str() {
-                if let Ok(id) = surrealdb::types::RecordId::parse_simple(id_str) {
-                    ids.push(id);
+            if let Some(url) = v["url"].as_str() {
+                urls.push(url.to_string());
+                if let Some(score) = v["score"].as_f64() {
+                    scores.insert(url.to_string(), score);
                 }
             }
-            if let (Some(url), Some(score)) = (v["url"].as_str(), v["score"].as_f64()) {
-                scores.insert(url.to_string(), score);
-            }
         }
-        (ids, scores)
+        (urls, scores)
     }
 
     /// Fetch adjacent chunks (±1) for each top result to build context window.
@@ -425,13 +423,13 @@ impl DbClient {
         max_idx: i32,
     ) -> Result<Vec<serde_json::Value>> {
         let sql = if group.is_some() {
-            "SELECT chunk_text FROM chunk
+            "SELECT chunk_index, chunk_text FROM chunk
              WHERE page.url = $url AND group = $group
                AND chunk_index >= $min_idx AND chunk_index <= $max_idx
              ORDER BY chunk_index"
                 .to_string()
         } else {
-            "SELECT chunk_text FROM chunk
+            "SELECT chunk_index, chunk_text FROM chunk
              WHERE page.url = $url
                AND chunk_index >= $min_idx AND chunk_index <= $max_idx
              ORDER BY chunk_index"
@@ -471,22 +469,22 @@ impl DbClient {
     }
 
     /// Build and execute a vector similarity query over chunks.
-    /// If `page_ids` is Some, restricts to those pages.
+    /// If `page_urls` is Some, restricts to chunks from those pages.
     async fn vector_chunk_query(
         &self,
         group: Option<&str>,
         embedding: &[f32],
         limit: usize,
-        page_ids: Option<Vec<surrealdb::types::RecordId>>,
+        page_urls: Option<Vec<String>>,
     ) -> Result<Vec<serde_json::Value>> {
-        let (sql, group_bind, page_ids_bind) =
-            Self::build_vector_query(group, embedding, limit, page_ids);
+        let (sql, group_bind, page_urls_bind) =
+            Self::build_vector_query(group, embedding, limit, page_urls);
         let mut q = self.query(sql).bind(("embedding", embedding.to_vec()));
         if let Some(g) = group_bind {
             q = q.bind(("group", g));
         }
-        if let Some(ids) = page_ids_bind {
-            q = q.bind(("page_ids", ids));
+        if let Some(urls) = page_urls_bind {
+            q = q.bind(("urls", urls));
         }
         let mut response = q.await?;
         let raw: Vec<serde_json::Value> = response.take(0)?;
@@ -497,13 +495,13 @@ impl DbClient {
         group: Option<&str>,
         _embedding: &[f32],
         limit: usize,
-        page_ids: Option<Vec<surrealdb::types::RecordId>>,
+        page_urls: Option<Vec<String>>,
     ) -> (
         String,
         Option<String>,
-        Option<Vec<surrealdb::types::RecordId>>,
+        Option<Vec<String>>,
     ) {
-        let alias = if page_ids.is_some() {
+        let alias = if page_urls.is_some() {
             "vector_score"
         } else {
             "score"
@@ -512,13 +510,13 @@ impl DbClient {
         if group.is_some() {
             conditions.push("group = $group");
         }
-        if page_ids.is_some() {
-            conditions.push("page IN $page_ids");
+        if page_urls.is_some() {
+            conditions.push("page.url IN $urls");
         }
         let where_clause = format!("WHERE {}", conditions.join(" AND "));
         let sql = Self::vector_chunk_sql(limit, alias, &where_clause);
         let group_bind = group.map(|g| g.to_string());
-        (sql, group_bind, page_ids)
+        (sql, group_bind, page_urls)
     }
 
     /// Ensure the HNSW vector index matches the expected dimension.

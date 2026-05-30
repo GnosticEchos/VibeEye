@@ -87,5 +87,6 @@ pub struct HybridResult {
     pub chunk_index: i32,
     pub bm25_score: Option<f64>,
     pub vector_score: Option<f64>,
+    #[serde(default)]
     pub expanded_text: String,
 }
