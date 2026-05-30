@@ -149,7 +149,12 @@ fn extract_overlap(current: &str, overlap_tokens: usize) -> String {
         return String::new();
     }
     let overlap_chars = overlap_tokens * 4;
-    let start = current.len().saturating_sub(overlap_chars);
+    let char_count = current.chars().count();
+    if char_count <= overlap_chars {
+        return current.to_string();
+    }
+    let skip = char_count - overlap_chars;
+    let start = current.char_indices().nth(skip).map(|(i, _)| i).unwrap_or(0);
     current[start..].to_string()
 }
 
@@ -258,6 +263,20 @@ mod tests {
                 "chunk exceeded target+overlap: {} tokens",
                 tokens
             );
+        }
+    }
+
+    #[test]
+    fn test_chunker_with_multibyte_chars() {
+        // Regression: ensure slicing at char boundaries doesn't panic on multi-byte UTF-8
+        let text = "In the case of a string literal, we know the contents at compile time, so the\ntext is hardcoded directly into the final executable. This is why string\nliterals are fast and efficient. But these properties only come from the string\nliteral's immutability. ".repeat(20);
+        let chunker = Chunker::new(50, 5, Tokenizer::CharHeuristic);
+        let chunks = chunker.chunk(&text);
+        assert!(!chunks.is_empty());
+        // Verify all chunks are valid UTF-8
+        for chunk in &chunks {
+            assert!(chunk.text.is_char_boundary(0));
+            assert!(chunk.text.is_char_boundary(chunk.text.len()));
         }
     }
 }
