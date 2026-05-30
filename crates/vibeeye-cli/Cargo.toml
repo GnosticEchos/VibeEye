@@ -33,5 +33,19 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+# Directories
+dirs = { workspace = true }
+
+# Optional: .env file loading for embedding API keys
+dotenvy = { workspace = true, optional = true }
+
+# Table formatting for query results
+comfy-table = { workspace = true }
+
+[features]
+default = []
+surrealdb = ["vibeeye-app/surrealdb"]
+embeddings = ["surrealdb", "vibeeye-app/embeddings", "dep:dotenvy"]
+
 [dev-dependencies]
 tempfile = { workspace = true }

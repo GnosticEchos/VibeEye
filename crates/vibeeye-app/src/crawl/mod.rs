@@ -3,13 +3,12 @@
 //! Reuses `navigate_and_capture` for page fetching and the extraction
 //! pipeline for content distillation.
 
-use crate::extraction;
-use crate::browser::BrowserSession;
-use crate::tools::common::PageCapture;
 use crate::Result;
+use crate::browser::BrowserSession;
+use crate::extraction;
+use crate::tools::common::PageCapture;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::fs;
@@ -19,6 +18,7 @@ use url::Url;
 use vibeeye_core::ContentFormat;
 
 mod links;
+pub mod output;
 pub mod robots;
 pub mod sitemap;
 
@@ -40,7 +40,7 @@ pub struct CrawlOptions {
     pub same_origin: bool,
     pub timeout_secs: u64,
     pub use_sitemap: bool,
-    pub output_dir: Option<PathBuf>,
+    pub outputs: Vec<std::sync::Arc<dyn output::CrawlOutput>>,
 }
 
 /// Result emitted for each successfully crawled page.
@@ -76,8 +76,7 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let mut host_last_request: HashMap<String, Instant> = HashMap::new();
     let mut results: Vec<CrawlResult> = Vec::new();
 
-    let mut session = BrowserSession::new()
-        .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+    let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
 
     while let Some((url, depth)) = queue.pop_front() {
         if results.len() >= opts.max_pages {
@@ -90,8 +89,16 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
         let permit = acquire_permit(semaphore.clone()).await?;
         apply_rate_limit(&url, &opts, &mut host_last_request).await;
 
-        let result =
-            crawl_one_page(&url, depth, &base_url, &opts, &mut visited, &mut queue, &mut session).await;
+        let result = crawl_one_page(
+            &url,
+            depth,
+            &base_url,
+            &opts,
+            &mut visited,
+            &mut queue,
+            &mut session,
+        )
+        .await;
         drop(permit);
         results.push(result);
         info!(
@@ -151,7 +158,12 @@ async fn load_robots(opts: &CrawlOptions, origin: &str) -> robots::RobotsTxt {
     }
 }
 
-fn should_crawl_page(depth: u32, url: &str, robots: &robots::RobotsTxt, opts: &CrawlOptions) -> bool {
+fn should_crawl_page(
+    depth: u32,
+    url: &str,
+    robots: &robots::RobotsTxt,
+    opts: &CrawlOptions,
+) -> bool {
     if depth > opts.max_depth {
         return false;
     }
@@ -159,7 +171,9 @@ fn should_crawl_page(depth: u32, url: &str, robots: &robots::RobotsTxt, opts: &C
 }
 
 fn robots_blocks(robots: &robots::RobotsTxt, url: &str) -> bool {
-    let Ok(parsed) = Url::parse(url) else { return false };
+    let Ok(parsed) = Url::parse(url) else {
+        return false;
+    };
     let allowed = robots.is_allowed(parsed.path());
     if !allowed {
         tracing::debug!(%url, "blocked by robots.txt");
@@ -199,22 +213,23 @@ async fn fetch_with_session(
     session: &mut BrowserSession,
     opts: &CrawlOptions,
 ) -> Result<PageCapture> {
-    let result = tokio::time::timeout(
-        Duration::from_secs(opts.timeout_secs),
-        async {
-            session
-                .navigate(url)
-                .await
-                .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
-            let html = session
-                .get_html()
-                .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))?;
-            let title = crate::extraction::extract_title(&html);
-            let current_url = session.current_url().unwrap_or(url).to_string();
-            Ok(PageCapture { url: current_url, html, title })
-        },
-    )
+    let result = tokio::time::timeout(Duration::from_secs(opts.timeout_secs), async {
+        session
+            .navigate(url)
+            .await
+            .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
+        let html = session
+            .get_html()
+            .await
+            .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+        let title = crate::extraction::extract_title(&html);
+        let current_url = session.current_url().unwrap_or(url).to_string();
+        Ok(PageCapture {
+            url: current_url,
+            html,
+            title,
+        })
+    })
     .await;
 
     match result {
@@ -224,7 +239,12 @@ async fn fetch_with_session(
     }
 }
 
-fn error_result(url: &str, depth: u32, format: &ContentFormat, err: &crate::AppError) -> CrawlResult {
+fn error_result(
+    url: &str,
+    depth: u32,
+    format: &ContentFormat,
+    err: &crate::AppError,
+) -> CrawlResult {
     CrawlResult {
         url: url.to_string(),
         depth,
@@ -283,8 +303,11 @@ fn extract_and_build(
     capture: PageCapture,
     format: ContentFormat,
 ) -> CrawlResult {
-    let links_found =
-        extract_links(&capture.html, &Url::parse(url).unwrap_or_else(|_| Url::parse("http://localhost").unwrap())).len();
+    let links_found = extract_links(
+        &capture.html,
+        &Url::parse(url).unwrap_or_else(|_| Url::parse("http://localhost").unwrap()),
+    )
+    .len();
 
     match extraction::extract(&capture.html, format) {
         Ok(content) => CrawlResult {
@@ -316,6 +339,7 @@ fn format_name(fmt: &ContentFormat) -> String {
     }
 }
 
+#[cfg(test)]
 fn file_extension(fmt: &ContentFormat) -> &'static str {
     match fmt {
         ContentFormat::Markdown => "md",
@@ -325,40 +349,13 @@ fn file_extension(fmt: &ContentFormat) -> &'static str {
 }
 
 async fn emit_results(results: &[CrawlResult], opts: &CrawlOptions) -> Result<()> {
-    if let Some(dir) = &opts.output_dir {
-        write_to_directory(dir, results, file_extension(&opts.format)).await
-    } else {
-        for result in results {
-            println!("{}", serde_json::to_string(result).unwrap_or_default());
-        }
-        Ok(())
+    for output in &opts.outputs {
+        output.emit_results(results).await?;
     }
+    Ok(())
 }
 
-async fn write_to_directory(
-    dir: &PathBuf,
-    results: &[CrawlResult],
-    ext: &str,
-) -> Result<()> {
-    fs::create_dir_all(dir).await.map_err(|e| {
-        crate::AppError::InvalidInput(format!("failed to create output directory: {e}"))
-    })?;
-
-    let mut manifest: Vec<serde_json::Value> = Vec::new();
-
-    for (idx, result) in results.iter().enumerate() {
-        let filename = format!("{:04}.{ext}", idx + 1);
-        let filepath = dir.join(&filename);
-        fs::write(&filepath, &result.content)
-            .await
-            .map_err(|e| crate::AppError::InvalidInput(format!("failed to write file: {e}")))?;
-        manifest.push(build_manifest_entry(result, &filename));
-    }
-
-    write_manifest(dir, &manifest).await
-}
-
-fn build_manifest_entry(result: &CrawlResult, filename: &str) -> serde_json::Value {
+pub fn build_manifest_entry(result: &CrawlResult, filename: &str) -> serde_json::Value {
     serde_json::json!({
         "url": result.url,
         "file": filename,
@@ -369,7 +366,7 @@ fn build_manifest_entry(result: &CrawlResult, filename: &str) -> serde_json::Val
     })
 }
 
-async fn write_manifest(dir: &std::path::Path, manifest: &[serde_json::Value]) -> Result<()> {
+pub async fn write_manifest(dir: &std::path::Path, manifest: &[serde_json::Value]) -> Result<()> {
     let path = dir.join("manifest.json");
     let json = serde_json::to_string_pretty(manifest)
         .map_err(|e| crate::AppError::InvalidInput(format!("failed to serialize manifest: {e}")))?;
@@ -412,11 +409,16 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         assert!(should_crawl_page(0, "https://example.com/", &robots, &opts));
         assert!(should_crawl_page(2, "https://example.com/", &robots, &opts));
-        assert!(!should_crawl_page(3, "https://example.com/", &robots, &opts));
+        assert!(!should_crawl_page(
+            3,
+            "https://example.com/",
+            &robots,
+            &opts
+        ));
     }
 
     #[test]
@@ -433,10 +435,20 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
-        assert!(should_crawl_page(0, "https://example.com/public", &robots, &opts));
-        assert!(!should_crawl_page(0, "https://example.com/private/page", &robots, &opts));
+        assert!(should_crawl_page(
+            0,
+            "https://example.com/public",
+            &robots,
+            &opts
+        ));
+        assert!(!should_crawl_page(
+            0,
+            "https://example.com/private/page",
+            &robots,
+            &opts
+        ));
     }
 
     #[test]
@@ -460,7 +472,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -496,7 +508,7 @@ mod tests {
             same_origin: false,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -523,7 +535,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -554,7 +566,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
@@ -577,6 +589,8 @@ mod tests {
         assert!(result.content.is_empty());
         assert_eq!(result.links_found, 0);
     }
+
+    use crate::crawl::output::CrawlOutput;
 
     #[tokio::test]
     async fn test_write_to_directory_creates_files() {
@@ -604,7 +618,8 @@ mod tests {
             },
         ];
 
-        write_to_directory(&output_dir, &results, "md").await.unwrap();
+        let output = output::DirectoryOutput::new(output_dir.clone(), "md");
+        output.emit_results(&results).await.unwrap();
 
         assert!(output_dir.exists());
         assert!(output_dir.join("0001.md").exists());
@@ -635,11 +650,12 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
-            output_dir: None,
+            outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
 
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let (queue, visited) = rt.block_on(async { build_queue(&opts, "https://example.com").await });
+        let (queue, visited) =
+            rt.block_on(async { build_queue(&opts, "https://example.com").await });
 
         assert_eq!(queue.len(), 1);
         assert_eq!(queue[0].0, "https://example.com/");
@@ -651,7 +667,8 @@ mod tests {
     fn test_extract_and_build_success() {
         let capture = PageCapture {
             url: "https://example.com/".to_string(),
-            html: "<html><head><title>Test Page</title></head><body>Hello</body></html>".to_string(),
+            html: "<html><head><title>Test Page</title></head><body>Hello</body></html>"
+                .to_string(),
             title: Some("Test Page".to_string()),
         };
 

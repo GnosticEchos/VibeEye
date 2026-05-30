@@ -120,9 +120,7 @@ mod tests {
 
     #[test]
     fn test_robots_disallow() {
-        let robots = RobotsTxt::parse(
-            "User-agent: *\nDisallow: /private/\nDisallow: /admin\n",
-        );
+        let robots = RobotsTxt::parse("User-agent: *\nDisallow: /private/\nDisallow: /admin\n");
         assert!(!robots.is_allowed("/private/page"));
         assert!(!robots.is_allowed("/admin"));
         assert!(robots.is_allowed("/public"));
@@ -130,18 +128,15 @@ mod tests {
 
     #[test]
     fn test_robots_allow_override() {
-        let robots = RobotsTxt::parse(
-            "User-agent: *\nDisallow: /\nAllow: /public/\n",
-        );
+        let robots = RobotsTxt::parse("User-agent: *\nDisallow: /\nAllow: /public/\n");
         assert!(!robots.is_allowed("/secret"));
         assert!(robots.is_allowed("/public/page"));
     }
 
     #[test]
     fn test_robots_only_wildcard_block() {
-        let robots = RobotsTxt::parse(
-            "User-agent: BotA\nDisallow: /\nUser-agent: *\nDisallow: /admin\n",
-        );
+        let robots =
+            RobotsTxt::parse("User-agent: BotA\nDisallow: /\nUser-agent: *\nDisallow: /admin\n");
         assert!(!robots.is_allowed("/admin"));
         assert!(robots.is_allowed("/page"));
     }

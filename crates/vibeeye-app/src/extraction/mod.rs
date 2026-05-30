@@ -4,8 +4,8 @@
 //! Full implementation in WP06.
 
 use crate::Result;
-use vibeeye_core::ContentFormat;
 use scraper::{Html, Selector};
+use vibeeye_core::ContentFormat;
 
 pub mod dom;
 pub mod markdown;
@@ -31,7 +31,9 @@ const NOISE_SELECTORS: &[&str] = &[
 pub fn clean_html(html: &str) -> String {
     let mut document = Html::parse_document(html);
     for sel_str in NOISE_SELECTORS {
-        let Ok(selector) = Selector::parse(sel_str) else { continue };
+        let Ok(selector) = Selector::parse(sel_str) else {
+            continue;
+        };
         let ids: Vec<_> = document.select(&selector).map(|el| el.id()).collect();
         for id in ids {
             if let Some(mut node) = document.tree.get_mut(id) {
@@ -70,7 +72,5 @@ pub fn strip_html(html: &str) -> String {
 /// Delegates to the DOM metadata extractor for robust parsing
 /// (handles `<title>`, Open Graph, and JSON-LD).
 pub fn extract_title(html: &str) -> Option<String> {
-    dom::extract_metadata(html)
-        .ok()
-        .and_then(|meta| meta.title)
+    dom::extract_metadata(html).ok().and_then(|meta| meta.title)
 }

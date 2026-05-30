@@ -49,6 +49,22 @@ quick-xml = { version = "0.37", features = ["serialize"] }
 toml = "0.8"
 dirs = "6"
 
+# Time handling
+chrono = { workspace = true }
+
+# Optional: SurrealDB embedded storage
+surrealdb = { workspace = true, optional = true }
+
+# Optional: embeddings, progress bars, table formatting
+indicatif = { workspace = true, optional = true }
+comfy-table = { workspace = true, optional = true }
+dotenvy = { workspace = true, optional = true }
+
+[features]
+default = []
+surrealdb = ["dep:surrealdb"]
+embeddings = ["surrealdb", "dep:indicatif", "dep:comfy-table", "dep:dotenvy"]
+
 [dev-dependencies]
 mockall = { workspace = true }
 tempfile = { workspace = true }

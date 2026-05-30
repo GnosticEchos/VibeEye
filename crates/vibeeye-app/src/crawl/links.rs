@@ -58,7 +58,9 @@ fn is_http_scheme(scheme: &str) -> bool {
 /// - remove default port
 /// - lowercase scheme and host
 pub fn normalize_url(url: &str) -> String {
-    let Ok(parsed) = Url::parse(url) else { return url.to_string() };
+    let Ok(parsed) = Url::parse(url) else {
+        return url.to_string();
+    };
 
     let scheme = parsed.scheme().to_ascii_lowercase();
     let host = parsed.host_str().unwrap_or("").to_ascii_lowercase();
@@ -82,7 +84,9 @@ pub fn normalize_url(url: &str) -> String {
 
 /// Return true when `url` shares the same origin (scheme + host) as `origin_url`.
 pub fn is_same_origin(url: &str, origin_url: &Url) -> bool {
-    let Ok(parsed) = Url::parse(url) else { return false };
+    let Ok(parsed) = Url::parse(url) else {
+        return false;
+    };
     let scheme = parsed.scheme().to_ascii_lowercase();
     let host = parsed.host_str().unwrap_or("").to_ascii_lowercase();
 

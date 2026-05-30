@@ -14,11 +14,9 @@ fn cli_help_tree_matches_tool_registry() {
         tree_all: false,
         output: vibeeye_cli::help_tree::HelpTreeOutputFormat::Json,
     };
-    let cli_json = vibeeye_cli::help_tree::generate_json_for_path::<vibeeye_cli::cli::Cli>(
-        &opts,
-        &[],
-    )
-    .unwrap();
+    let cli_json =
+        vibeeye_cli::help_tree::generate_json_for_path::<vibeeye_cli::cli::Cli>(&opts, &[])
+            .unwrap();
 
     let cli_subcommands = cli_json
         .get("subcommands")

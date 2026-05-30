@@ -106,11 +106,7 @@ pub fn parse_help_tree_invocation(argv: &[String]) -> Result<Option<HelpTreeInvo
 
 /// Process a single argv token and any following value tokens.
 /// Returns the index of the last consumed token.
-fn process_one_arg(
-    state: &mut ParseState,
-    argv: &[String],
-    idx: usize,
-) -> Result<usize, String> {
+fn process_one_arg(state: &mut ParseState, argv: &[String], idx: usize) -> Result<usize, String> {
     let arg = &argv[idx];
     match arg.as_str() {
         "--help-tree" => {
@@ -120,9 +116,7 @@ fn process_one_arg(
         "--tree-depth" | "-L" => {
             parse_usize_arg(state, argv, idx, arg, |s, v| s.depth_limit = Some(v))
         }
-        "--tree-ignore" | "-I" => {
-            parse_string_arg(state, argv, idx, arg, |s, v| s.ignore.push(v))
-        }
+        "--tree-ignore" | "-I" => parse_string_arg(state, argv, idx, arg, |s, v| s.ignore.push(v)),
         "--tree-all" | "-a" => {
             state.tree_all = true;
             Ok(idx)
@@ -797,11 +791,7 @@ mod tests {
     #[test]
     fn test_format_flag_line_long_only() {
         use clap::{Arg, Command};
-        let cmd = Command::new("test").arg(
-            Arg::new("output")
-                .long("output")
-                .help("Output path"),
-        );
+        let cmd = Command::new("test").arg(Arg::new("output").long("output").help("Output path"));
         let arg = cmd.get_arguments().next().unwrap();
         let line = format_flag_line(arg, "");
         // Tree prefix contains dashes, so just assert short flag not present as "-o "
@@ -831,10 +821,8 @@ mod tests {
     #[test]
     fn test_format_flag_line_id_fallback() {
         use clap::{Arg, Command};
-        let cmd = Command::new("test").arg(
-            Arg::new("my-flag")
-                .help("A custom flag without short/long"),
-        );
+        let cmd =
+            Command::new("test").arg(Arg::new("my-flag").help("A custom flag without short/long"));
         let arg = cmd.get_arguments().next().unwrap();
         let line = format_flag_line(arg, "");
         assert!(line.contains("my-flag"));

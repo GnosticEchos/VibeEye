@@ -1,6 +1,6 @@
 //! CLI argument parsing for vibe-eye
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 /// VibeEye - Headless browser for agentic content extraction
@@ -92,5 +92,134 @@ pub enum Commands {
         /// Pre-seed from sitemap.xml
         #[arg(long)]
         sitemap: Option<bool>,
+
+        /// Persist crawl results to SurrealDB
+        #[cfg(feature = "surrealdb")]
+        #[arg(long)]
+        surrealdb: bool,
+
+        /// Generate embeddings after crawl (requires --surrealdb)
+        #[cfg(feature = "embeddings")]
+        #[arg(long)]
+        embed: bool,
     },
+
+    /// Import crawl data into SurrealDB
+    #[cfg(feature = "embeddings")]
+    Import {
+        /// Source file or directory
+        source: PathBuf,
+
+        /// Target group name
+        #[arg(short, long)]
+        group: String,
+    },
+
+    /// Export crawl data from SurrealDB
+    #[cfg(feature = "embeddings")]
+    Export {
+        /// Output file path
+        target: PathBuf,
+
+        /// Group to export (all groups if omitted)
+        #[arg(short, long)]
+        group: Option<String>,
+    },
+
+    /// SurrealDB database management
+    #[cfg(feature = "surrealdb")]
+    Db {
+        #[command(subcommand)]
+        command: DbCommands,
+    },
+}
+
+/// Query result output format.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum OutputFormat {
+    Json,
+    Table,
+    Markdown,
+}
+
+#[derive(Subcommand, Debug)]
+#[cfg(feature = "surrealdb")]
+pub enum DbCommands {
+    /// List all crawl groups
+    List,
+
+    /// Show stats for a group
+    Status {
+        /// Group name
+        group: String,
+    },
+
+    /// Full-text search (BM25) over a group or all groups
+    Query {
+        /// Search query string
+        query: String,
+
+        /// Group to search (all groups if omitted)
+        #[arg(short, long)]
+        group: Option<String>,
+
+        /// Maximum results
+        #[arg(short, long, default_value = "10")]
+        limit: usize,
+
+        /// Output format
+        #[arg(short, long, default_value = "json")]
+        format: OutputFormat,
+    },
+
+    /// Vector similarity search over chunk embeddings
+    #[cfg(feature = "embeddings")]
+    Vector {
+        /// Search query string
+        query: String,
+
+        /// Group to search (all groups if omitted)
+        #[arg(short, long)]
+        group: Option<String>,
+
+        /// Maximum results
+        #[arg(short, long, default_value = "10")]
+        limit: usize,
+
+        /// Output format
+        #[arg(short, long, default_value = "json")]
+        format: OutputFormat,
+    },
+
+    /// Hybrid search: BM25 pre-filter + vector rerank
+    #[cfg(feature = "embeddings")]
+    Hybrid {
+        /// Search query string
+        query: String,
+
+        /// Group to search (all groups if omitted)
+        #[arg(short, long)]
+        group: Option<String>,
+
+        /// Maximum final results
+        #[arg(short, long, default_value = "10")]
+        limit: usize,
+
+        /// BM25 candidate pool size
+        #[arg(long, default_value = "50")]
+        bm25_limit: usize,
+
+        /// Output format
+        #[arg(short, long, default_value = "json")]
+        format: OutputFormat,
+    },
+
+    /// Remove all data for a group
+    Reset {
+        /// Group name
+        group: String,
+    },
+
+    /// Remove all data (all groups)
+    ResetAll,
 }

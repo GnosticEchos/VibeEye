@@ -4,5 +4,7 @@
 //! Merge order: CLI flags → subdomain → domain → global.
 
 pub mod crawl;
+pub mod embeddings;
 
 pub use crawl::{CrawlConfig, CrawlProfile};
+pub use embeddings::{EmbeddingConfig, interpolate_env_vars};

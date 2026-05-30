@@ -44,6 +44,16 @@ pub struct CrawlProfile {
     pub timeout: Option<u64>,
     pub sitemap: Option<bool>,
     pub output: Option<String>,
+    /// SurrealDB embedded storage path (e.g. "~/.local/share/vibe-eye/db").
+    pub surrealdb_path: Option<String>,
+    /// SurrealDB namespace.
+    pub surrealdb_ns: Option<String>,
+    /// SurrealDB database name.
+    pub surrealdb_db: Option<String>,
+    /// Crawl group name override (default: derived from domain).
+    pub group: Option<String>,
+    /// Embedding provider configuration.
+    pub embeddings: Option<super::embeddings::EmbeddingConfig>,
 }
 
 macro_rules! merge_opt {
@@ -73,6 +83,11 @@ impl CrawlProfile {
         merge_opt!(self, other, timeout, copy);
         merge_opt!(self, other, sitemap, copy);
         merge_opt!(self, other, output);
+        merge_opt!(self, other, surrealdb_path);
+        merge_opt!(self, other, surrealdb_ns);
+        merge_opt!(self, other, surrealdb_db);
+        merge_opt!(self, other, group);
+        merge_opt!(self, other, embeddings);
     }
 }
 
@@ -93,8 +108,9 @@ impl CrawlConfig {
         let path = match explicit {
             Some(p) => p.to_path_buf(),
             None => {
-                let config_dir = dirs::config_dir()
-                    .ok_or_else(|| crate::AppError::InvalidInput("no config directory found".into()))?;
+                let config_dir = dirs::config_dir().ok_or_else(|| {
+                    crate::AppError::InvalidInput("no config directory found".into())
+                })?;
                 config_dir.join("vibe-eye").join("crawl.toml")
             }
         };

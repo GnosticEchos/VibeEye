@@ -3,11 +3,15 @@ use clap::Parser;
 
 mod cli;
 mod commands;
+mod format;
 mod help_tree;
 
 use cli::Cli;
 
 fn main() -> Result<()> {
+    #[cfg(feature = "embeddings")]
+    let _ = dotenvy::dotenv();
+
     let args: Vec<String> = std::env::args().collect();
     let invocation =
         help_tree::parse_help_tree_invocation(&args[1..]).map_err(|e| anyhow::anyhow!(e))?;

@@ -1,7 +1,7 @@
 //! Sitemap.xml fetcher and parser.
 
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use std::time::Duration;
 
 /// Fetch and parse a sitemap.xml, returning the list of `<loc>` URLs.
@@ -43,11 +43,7 @@ fn parse_sitemap(xml: &str) -> Vec<String> {
     urls
 }
 
-fn handle_event(
-    event: Event,
-    in_loc: &mut bool,
-    urls: &mut Vec<String>,
-) -> bool {
+fn handle_event(event: Event, in_loc: &mut bool, urls: &mut Vec<String>) -> bool {
     if let Event::Eof = event {
         return true;
     }

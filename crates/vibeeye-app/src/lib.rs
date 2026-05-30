@@ -4,11 +4,19 @@
 //! and the SonarDiscovery trait for CLI/MCP parity.
 
 pub mod browser;
+#[cfg(feature = "embeddings")]
+pub mod chunk;
 pub mod config;
 pub mod crawl;
+#[cfg(feature = "surrealdb")]
+pub mod db;
 pub mod discovery;
+#[cfg(feature = "embeddings")]
+pub mod embed;
 pub mod error;
 pub mod extraction;
+#[cfg(feature = "embeddings")]
+pub mod progress;
 pub mod tool_registry;
 pub mod tools;
 
