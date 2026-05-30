@@ -22,3 +22,6 @@ DEFINE FIELD created_at ON chunk TYPE datetime DEFAULT time::now() PERMISSIONS F
 
 -- Index for group-scoped chunk queries
 DEFINE INDEX idx_chunk_group ON chunk FIELDS group;
+
+-- Index for expansion queries (adjacent chunks by page)
+DEFINE INDEX idx_chunk_page_index ON chunk FIELDS page, chunk_index;

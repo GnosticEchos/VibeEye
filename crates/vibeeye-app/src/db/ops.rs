@@ -275,7 +275,8 @@ impl DbClient {
         bm25_limit: usize,
         knn_limit: usize,
     ) -> Result<Vec<crate::db::models::HybridResult>> {
-        let candidate_ids = self.bm25_candidates(group, text_query, bm25_limit).await?;
+        let (candidate_ids, bm25_scores) =
+            self.bm25_candidates(group, text_query, bm25_limit).await?;
 
         if candidate_ids.is_empty() {
             return Ok(Vec::new());
@@ -285,59 +286,184 @@ impl DbClient {
             .vector_chunk_query(group, query_embedding, knn_limit, Some(candidate_ids))
             .await?;
 
-        let results: Vec<crate::db::models::HybridResult> = raw
-            .into_iter()
-            .filter_map(|v| {
-                let mut hr: crate::db::models::HybridResult = serde_json::from_value(v).ok()?;
-                hr.vector_score = Some(hr.vector_score.unwrap_or(0.0));
-                Some(hr)
-            })
-            .collect();
+        self.assemble_hybrid_results(group, raw, &bm25_scores).await
+    }
 
+    async fn assemble_hybrid_results(
+        &self,
+        group: Option<&str>,
+        raw: Vec<serde_json::Value>,
+        bm25_scores: &std::collections::HashMap<String, f64>,
+    ) -> Result<Vec<crate::db::models::HybridResult>> {
+        let (results, keys) = Self::extract_hybrid_rows(&raw, bm25_scores);
+        self.apply_expansions(group, results, &keys).await
+    }
+
+    fn extract_hybrid_rows(
+        raw: &[serde_json::Value],
+        bm25_scores: &std::collections::HashMap<String, f64>,
+    ) -> (Vec<crate::db::models::HybridResult>, Vec<(String, i32)>) {
+        let mut results = Vec::new();
+        let mut keys = Vec::new();
+        for v in raw {
+            let mut hr: crate::db::models::HybridResult = match serde_json::from_value(v.clone()) {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+            hr.bm25_score = bm25_scores.get(&hr.page_url).copied();
+            hr.vector_score = Some(hr.vector_score.unwrap_or(0.0));
+            keys.push((hr.page_url.clone(), hr.chunk_index));
+            results.push(hr);
+        }
+        (results, keys)
+    }
+
+    async fn apply_expansions(
+        &self,
+        group: Option<&str>,
+        mut results: Vec<crate::db::models::HybridResult>,
+        keys: &[(String, i32)],
+    ) -> Result<Vec<crate::db::models::HybridResult>> {
+        if keys.is_empty() {
+            return Ok(results);
+        }
+        let expanded = self.expand_chunks(group, keys).await?;
+        for hr in results.iter_mut() {
+            hr.expanded_text = expanded
+                .get(&(hr.page_url.clone(), hr.chunk_index))
+                .cloned()
+                .unwrap_or_else(|| hr.chunk_text.clone());
+        }
         Ok(results)
     }
 
-    /// BM25 pre-filter: return page RecordIds matching the text query.
+    /// BM25 pre-filter: return page RecordIds and a URL → score map.
     async fn bm25_candidates(
         &self,
         group: Option<&str>,
         text_query: &str,
         limit: usize,
-    ) -> Result<Vec<surrealdb::types::RecordId>> {
-        let raw: Vec<serde_json::Value> = if let Some(g) = group {
-            self.query(
-                "SELECT id, search::score(0) AS score
-                 FROM page WHERE group = $group AND content @@ $query
-                 ORDER BY score DESC LIMIT $limit",
-            )
-            .bind(("group", g.to_string()))
-            .bind(("query", text_query.to_string()))
-            .bind(("limit", limit))
-            .await?
-            .take(0)?
-        } else {
-            self.query(
-                "SELECT id, search::score(0) AS score
-                 FROM page WHERE content @@ $query
-                 ORDER BY score DESC LIMIT $limit",
-            )
-            .bind(("query", text_query.to_string()))
-            .bind(("limit", limit))
-            .await?
-            .take(0)?
-        };
+    ) -> Result<(
+        Vec<surrealdb::types::RecordId>,
+        std::collections::HashMap<String, f64>,
+    )> {
+        let raw = self.run_bm25_query(group, text_query, limit).await?;
+        Ok(Self::parse_bm25_rows(raw))
+    }
 
-        Ok(raw
+    async fn run_bm25_query(
+        &self,
+        group: Option<&str>,
+        text_query: &str,
+        limit: usize,
+    ) -> Result<Vec<serde_json::Value>> {
+        let sql = if group.is_some() {
+            "SELECT id, url, search::score(0) AS score
+             FROM page WHERE group = $group AND content @@ $query
+             ORDER BY score DESC LIMIT $limit"
+                .to_string()
+        } else {
+            "SELECT id, url, search::score(0) AS score
+             FROM page WHERE content @@ $query
+             ORDER BY score DESC LIMIT $limit"
+                .to_string()
+        };
+        let mut q = self.query(&sql);
+        if let Some(g) = group {
+            q = q.bind(("group", g.to_string()));
+        }
+        Ok(q.bind(("query", text_query.to_string()))
+            .bind(("limit", limit))
+            .await?
+            .take(0)?)
+    }
+
+    fn parse_bm25_rows(
+        raw: Vec<serde_json::Value>,
+    ) -> (
+        Vec<surrealdb::types::RecordId>,
+        std::collections::HashMap<String, f64>,
+    ) {
+        let mut ids = Vec::new();
+        let mut scores = std::collections::HashMap::new();
+        for v in raw {
+            if let Some(id_str) = v["id"].as_str() {
+                if let Ok(id) = surrealdb::types::RecordId::parse_simple(id_str) {
+                    ids.push(id);
+                }
+            }
+            if let (Some(url), Some(score)) = (v["url"].as_str(), v["score"].as_f64()) {
+                scores.insert(url.to_string(), score);
+            }
+        }
+        (ids, scores)
+    }
+
+    /// Fetch adjacent chunks (±1) for each top result to build context window.
+    async fn expand_chunks(
+        &self,
+        group: Option<&str>,
+        keys: &[(String, i32)],
+    ) -> Result<std::collections::HashMap<(String, i32), String>> {
+        let mut result = std::collections::HashMap::new();
+        for (url, idx) in keys {
+            let raw = self
+                .run_expansion_query(group, url, idx.saturating_sub(1), idx + 1)
+                .await?;
+            if let Some(text) = Self::join_expansion_rows(raw) {
+                result.insert((url.clone(), *idx), text);
+            }
+        }
+        Ok(result)
+    }
+
+    async fn run_expansion_query(
+        &self,
+        group: Option<&str>,
+        url: &str,
+        min_idx: i32,
+        max_idx: i32,
+    ) -> Result<Vec<serde_json::Value>> {
+        let sql = if group.is_some() {
+            "SELECT chunk_text FROM chunk
+             WHERE page.url = $url AND group = $group
+               AND chunk_index >= $min_idx AND chunk_index <= $max_idx
+             ORDER BY chunk_index"
+                .to_string()
+        } else {
+            "SELECT chunk_text FROM chunk
+             WHERE page.url = $url
+               AND chunk_index >= $min_idx AND chunk_index <= $max_idx
+             ORDER BY chunk_index"
+                .to_string()
+        };
+        let mut q = self.query(&sql);
+        if let Some(g) = group {
+            q = q.bind(("group", g.to_string()));
+        }
+        Ok(q.bind(("url", url.to_string()))
+            .bind(("min_idx", min_idx))
+            .bind(("max_idx", max_idx))
+            .await?
+            .take(0)?)
+    }
+
+    fn join_expansion_rows(raw: Vec<serde_json::Value>) -> Option<String> {
+        let parts: Vec<String> = raw
             .into_iter()
-            .filter_map(|v| v["id"].as_str().map(|s| s.to_string()))
-            .filter_map(|s| surrealdb::types::RecordId::parse_simple(&s).ok())
-            .collect())
+            .filter_map(|v| v["chunk_text"].as_str().map(|s| s.to_string()))
+            .collect();
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join("\n\n"))
+        }
     }
 
     fn vector_chunk_sql(limit: usize, alias: &str, where_clause: &str) -> String {
         format!(
             "SELECT page.url AS page_url, page.title AS page_title,
-             chunk_text, heading_path,
+             chunk_text, heading_path, chunk_index,
              vector::similarity::cosine(embedding, $embedding) AS {alias}
              FROM chunk {where_clause}
              ORDER BY {alias} DESC LIMIT {limit}"

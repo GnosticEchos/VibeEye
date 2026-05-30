@@ -84,6 +84,8 @@ pub struct HybridResult {
     pub page_title: Option<String>,
     pub chunk_text: String,
     pub heading_path: Vec<String>,
+    pub chunk_index: i32,
     pub bm25_score: Option<f64>,
     pub vector_score: Option<f64>,
+    pub expanded_text: String,
 }
