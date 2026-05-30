@@ -107,20 +107,21 @@ impl SurrealOutput {
             crate::chunk::Tokenizer::CharHeuristic,
         );
 
+        let eligible: Vec<_> = results
+            .iter()
+            .filter(|r| r.error.is_none() && !r.content.trim().is_empty() && page_ids.contains_key(&r.url))
+            .collect();
+
+        if eligible.is_empty() {
+            return Ok(());
+        }
+
+        let progress = crate::progress::ProgressReporter::new(eligible.len() as u64, "Embedding");
         let mut detected_dimension: Option<usize> = None;
         let mut total_inserted = 0usize;
 
-        for result in results {
-            if result.error.is_some() || result.content.trim().is_empty() {
-                continue;
-            }
-            let page_id = match page_ids.get(&result.url) {
-                Some(id) => id.clone(),
-                None => {
-                    eprintln!("WARN: no page ID for {}, skipping embedding", result.url);
-                    continue;
-                }
-            };
+        for result in eligible {
+            let page_id = page_ids.get(&result.url).unwrap().clone();
             let count = self
                 .process_page(
                     result,
@@ -132,8 +133,10 @@ impl SurrealOutput {
                 )
                 .await;
             total_inserted += count;
+            progress.inc(1);
         }
 
+        progress.finish();
         println!("Chunks inserted: {}", total_inserted);
         Ok(())
     }
