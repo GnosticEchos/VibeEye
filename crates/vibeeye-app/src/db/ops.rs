@@ -343,10 +343,7 @@ impl DbClient {
         group: Option<&str>,
         text_query: &str,
         limit: usize,
-    ) -> Result<(
-        Vec<String>,
-        std::collections::HashMap<String, f64>,
-    )> {
+    ) -> Result<(Vec<String>, std::collections::HashMap<String, f64>)> {
         let raw = self.run_bm25_query(group, text_query, limit).await?;
         Ok(Self::parse_bm25_rows(raw))
     }
@@ -380,10 +377,7 @@ impl DbClient {
 
     fn parse_bm25_rows(
         raw: Vec<serde_json::Value>,
-    ) -> (
-        Vec<String>,
-        std::collections::HashMap<String, f64>,
-    ) {
+    ) -> (Vec<String>, std::collections::HashMap<String, f64>) {
         let mut urls = Vec::new();
         let mut scores = std::collections::HashMap::new();
         for v in raw {
@@ -496,11 +490,7 @@ impl DbClient {
         _embedding: &[f32],
         limit: usize,
         page_urls: Option<Vec<String>>,
-    ) -> (
-        String,
-        Option<String>,
-        Option<Vec<String>>,
-    ) {
+    ) -> (String, Option<String>, Option<Vec<String>>) {
         let alias = if page_urls.is_some() {
             "vector_score"
         } else {
