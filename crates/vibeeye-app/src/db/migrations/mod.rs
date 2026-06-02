@@ -2,15 +2,16 @@
 
 use anyhow::Result;
 use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
+use surrealdb::engine::any::Any;
 
 pub const MIGRATIONS: &[(&str, &str)] = &[
     ("001_initial", include_str!("001_initial.surql")),
     ("002_add_chunks", include_str!("002_add_chunks.surql")),
+    ("003_add_meta", include_str!("003_add_meta.surql")),
 ];
 
 /// Run all pending migrations in order.
-pub async fn run_all(db: &Surreal<Db>) -> Result<()> {
+pub async fn run_all(db: &Surreal<Any>) -> Result<()> {
     // Ensure metadata table exists so we can track version
     db.query(
         r#"
@@ -37,7 +38,7 @@ pub async fn run_all(db: &Surreal<Db>) -> Result<()> {
     Ok(())
 }
 
-async fn get_version(db: &Surreal<Db>) -> Result<String> {
+async fn get_version(db: &Surreal<Any>) -> Result<String> {
     let mut result = db
         .query("SELECT `value` FROM db_metadata WHERE key = 'schema_version'")
         .await?;
@@ -45,7 +46,7 @@ async fn get_version(db: &Surreal<Db>) -> Result<String> {
     Ok(row.unwrap_or_default())
 }
 
-async fn set_version(db: &Surreal<Db>, version: &str) -> Result<()> {
+async fn set_version(db: &Surreal<Any>, version: &str) -> Result<()> {
     db.query(
         "UPSERT db_metadata SET value = $version, updated_at = time::now() WHERE key = 'schema_version'"
     )

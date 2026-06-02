@@ -56,33 +56,62 @@ impl DbClient {
     /// crawls of the same URL within a group update the existing record.
     /// Returns the RecordId of the upserted page.
     pub async fn insert_page(&self, record: &PageRecord) -> Result<surrealdb::types::RecordId> {
-        // Upsert the page
-        self.query(
-            "UPSERT page SET group = $group, url = $url, title = $title,
-             content = $content, depth = $depth, format = $format,
-             crawled_at = $crawled_at WHERE url = $url AND group = $group",
-        )
-        .bind(("group", record.group.clone()))
-        .bind(("url", record.url.clone()))
-        .bind(("title", record.title.clone()))
-        .bind(("content", record.content.clone()))
-        .bind(("depth", record.depth))
-        .bind(("format", record.format.clone()))
-        .bind(("crawled_at", record.crawled_at))
-        .await?;
-
-        // Query the ID back separately
+        // SurrealDB v3 has a bug where UPSERT over WebSocket returns empty results
+        // when using parameter binding. Workaround: SELECT first, then CREATE or UPDATE.
         let mut result = self
-            .query("SELECT id FROM page WHERE url = $url AND group = $group LIMIT 1")
+            .query("SELECT id FROM page WHERE url = $url AND `group` = $group LIMIT 1")
             .bind(("url", record.url.clone()))
             .bind(("group", record.group.clone()))
+            .await?;
+        let existing: Vec<serde_json::Value> = result.take(0)?;
+
+        if let Some(id_val) = existing.into_iter().next() {
+            // Record exists — update it
+            let id_str = id_val["id"]
+                .as_str()
+                .map(|s| s.to_string())
+                .ok_or_else(|| anyhow::anyhow!("invalid id after select"))?;
+            let id = surrealdb::types::RecordId::parse_simple(&id_str)?;
+            self.query(
+                "UPDATE $id SET `group` = $group, url = $url, title = $title,
+                 content = $content, depth = $depth, format = $format,
+                 crawled_at = $crawled_at, meta = $meta",
+            )
+            .bind(("id", id.clone()))
+            .bind(("group", record.group.clone()))
+            .bind(("url", record.url.clone()))
+            .bind(("title", record.title.clone()))
+            .bind(("content", record.content.clone()))
+            .bind(("depth", record.depth))
+            .bind(("format", record.format.clone()))
+            .bind(("crawled_at", record.crawled_at))
+            .bind(("meta", record.meta.clone()))
+            .await?;
+            return Ok(id);
+        }
+
+        // Record does not exist — create it
+        let mut result = self
+            .query(
+                "CREATE page SET `group` = $group, url = $url, title = $title,
+                 content = $content, depth = $depth, format = $format,
+                 crawled_at = $crawled_at, meta = $meta",
+            )
+            .bind(("group", record.group.clone()))
+            .bind(("url", record.url.clone()))
+            .bind(("title", record.title.clone()))
+            .bind(("content", record.content.clone()))
+            .bind(("depth", record.depth))
+            .bind(("format", record.format.clone()))
+            .bind(("crawled_at", record.crawled_at))
+            .bind(("meta", record.meta.clone()))
             .await?;
         let raw: Vec<serde_json::Value> = result.take(0)?;
         let id_str = raw
             .into_iter()
             .next()
             .and_then(|v| v["id"].as_str().map(|s| s.to_string()))
-            .ok_or_else(|| anyhow::anyhow!("page not found after upsert"))?;
+            .ok_or_else(|| anyhow::anyhow!("page not found after create"))?;
         let id = surrealdb::types::RecordId::parse_simple(&id_str)?;
         Ok(id)
     }
@@ -92,7 +121,7 @@ impl DbClient {
     /// Creates the relation `page -> discovered -> page` with group tag.
     pub async fn insert_discovered(&self, link: &LinkRecord) -> Result<()> {
         self.query(
-            "RELATE $from->discovered->$to SET group = $group, anchor_text = $anchor_text, discovered_at = $discovered_at",
+            "RELATE $from->discovered->$to SET `group` = $group, anchor_text = $anchor_text, discovered_at = $discovered_at",
         )
         .bind(("from", link.from_page.clone()))
         .bind(("to", link.to_page.clone()))
@@ -151,10 +180,25 @@ impl DbClient {
         Ok(results)
     }
 
+    /// Update the structured metadata for a page by URL and group.
+    pub async fn update_page_meta(
+        &self,
+        group: &str,
+        url: &str,
+        meta: Option<serde_json::Value>,
+    ) -> Result<()> {
+        self.query("UPDATE page SET meta = $meta WHERE url = $url AND `group` = $group")
+            .bind(("group", group.to_string()))
+            .bind(("url", url.to_string()))
+            .bind(("meta", meta))
+            .await?;
+        Ok(())
+    }
+
     /// List all distinct crawl groups.
     pub async fn list_groups(&self) -> Result<Vec<String>> {
         let raw: Vec<serde_json::Value> = self
-            .query("SELECT VALUE group FROM page GROUP BY group")
+            .query("SELECT VALUE `group` FROM page GROUP BY `group`")
             .await?
             .take(0)?;
         let groups: Vec<String> = raw
@@ -535,6 +579,7 @@ mod tests {
             depth: 0,
             format: "markdown".to_string(),
             crawled_at: Utc::now(),
+            meta: None,
         };
         db.insert_page(&page).await?;
 
@@ -560,6 +605,7 @@ mod tests {
             depth: 0,
             format: "markdown".to_string(),
             crawled_at: Utc::now(),
+            meta: None,
         };
         let page2 = PageRecord {
             id: None,
@@ -570,6 +616,7 @@ mod tests {
             depth: 1,
             format: "markdown".to_string(),
             crawled_at: Utc::now(),
+            meta: None,
         };
         let id1 = db.insert_page(&page1).await?;
         let id2 = db.insert_page(&page2).await?;
@@ -594,6 +641,7 @@ mod tests {
             depth: 0,
             format: "html".to_string(),
             crawled_at: Utc::now(),
+            meta: None,
         };
         db.insert_page(&page3).await?;
 

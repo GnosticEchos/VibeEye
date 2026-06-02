@@ -25,10 +25,11 @@ pub async fn import(db: &DbClient, group: &str, source: ImportSource<'_>) -> Res
 }
 
 async fn import_surql(_db: &DbClient, _group: &str, _path: &Path) -> Result<()> {
-    // TODO: parse simple CREATE table SET ... statements
-    // For now, execute the file directly via SurrealDB query
     let content = tokio::fs::read_to_string(_path).await?;
-    _db.query(&content).await?;
+    let response = _db.query(&content).await?;
+    // Validate every statement in the response; statement-level errors
+    // (e.g. parse failures) are returned here, unlike the top-level Future.
+    response.check()?;
     Ok(())
 }
 
@@ -57,6 +58,7 @@ fn build_page_record(
         depth,
         format: format.to_string(),
         crawled_at: chrono::Utc::now(),
+        meta: None,
     }
 }
 
@@ -133,4 +135,47 @@ async fn import_text_dir(db: &DbClient, group: &str, path: &Path) -> Result<()> 
         process_text_file(db, group, &entry.path()).await?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[tokio::test]
+    async fn test_import_surql_single_page() -> Result<()> {
+        let db = DbClient::connect_mem().await?;
+        db.use_ns_db("test", "test").await?;
+        db.bootstrap().await?;
+
+        let mut file = tempfile::NamedTempFile::with_suffix(".surql")?;
+        writeln!(
+            file,
+            "CREATE page SET `group` = 'test_group', url = 'https://example.com/', \
+             title = 'Test', content = 'Hello world', depth = 0, format = 'text', \
+             crawled_at = d'2026-05-30T00:00:00Z';"
+        )?;
+        file.flush()?;
+
+        import_surql(&db, "test_group", file.path()).await?;
+
+        let stats = db.group_stats("test_group").await?;
+        assert_eq!(stats.page_count, 1, "imported page should exist");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_import_surql_rejects_invalid_syntax() -> Result<()> {
+        let db = DbClient::connect_mem().await?;
+        db.use_ns_db("test", "test").await?;
+        db.bootstrap().await?;
+
+        let mut file = tempfile::NamedTempFile::with_suffix(".surql")?;
+        writeln!(file, "INVALID_STATEMENT foo;")?;
+        file.flush()?;
+
+        let result = import_surql(&db, "test_group", file.path()).await;
+        assert!(result.is_err(), "invalid SurQL should be rejected");
+        Ok(())
+    }
 }

@@ -1,29 +1,56 @@
-use std::path::Path;
-
 use anyhow::Result;
 use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
+use surrealdb::engine::any::Any;
+use surrealdb::opt::auth::Root;
 
 use super::schema;
 
-/// Wrapper around a SurrealDB local connection.
+/// Wrapper around a SurrealDB connection (local SurrealKV, remote WS/HTTP, or memory).
 #[derive(Debug, Clone)]
 pub struct DbClient {
-    inner: Surreal<Db>,
+    inner: Surreal<Any>,
 }
 
 impl DbClient {
-    /// Connect to an embedded SurrealKV database.
-    pub async fn connect(path: &Path) -> Result<Self> {
-        let db =
-            Surreal::new::<surrealdb::engine::local::SurrealKv>(path.to_string_lossy().as_ref())
-                .await?;
+    /// Connect to a SurrealDB instance via a URL.
+    ///
+    /// Supported schemes:
+    /// - `surrealkv://path` – embedded file-based database
+    /// - `ws://user:pass@host:port` / `wss://...` – remote WebSocket
+    /// - `http://user:pass@host:port` / `https://...` – remote HTTP
+    /// - `mem://` – in-memory (ephemeral)
+    pub async fn connect(url: &str) -> Result<Self> {
+        let db = surrealdb::engine::any::connect(url).await?;
+
+        // For remote endpoints, extract credentials from the URL and sign in.
+        // SurrealDB's Any engine establishes the connection but does not
+        // automatically authenticate using URL credentials.
+        if let Ok(parsed) = url::Url::parse(url) {
+            let scheme = parsed.scheme();
+            if matches!(scheme, "ws" | "wss" | "http" | "https") {
+                if let Some(password) = parsed.password() {
+                    let username = if parsed.username().is_empty() {
+                        None
+                    } else {
+                        Some(parsed.username())
+                    };
+                    if let Some(username) = username {
+                        db.signin(Root {
+                            username: username.to_owned(),
+                            password: password.to_owned(),
+                        })
+                        .await?;
+                    }
+                }
+            }
+        }
+
         Ok(Self { inner: db })
     }
 
     /// Connect to an in-memory database (for tests).
     pub async fn connect_mem() -> Result<Self> {
-        let db = Surreal::new::<surrealdb::engine::local::Mem>(()).await?;
+        let db = surrealdb::engine::any::connect("mem://").await?;
         Ok(Self { inner: db })
     }
 
@@ -40,17 +67,19 @@ impl DbClient {
 
     /// Remove all data for a specific group.
     pub async fn reset_group(&self, group: &str) -> Result<()> {
+        // Use indexed SELECT subqueries because DELETE WHERE does not use
+        // indexes as of SurrealDB v3 (fixed planned for v2.3.0+).
         self.inner
-            .query("DELETE page WHERE group = $group")
+            .query("DELETE (SELECT id FROM page WHERE `group` = $group)")
             .bind(("group", group.to_string()))
             .await?;
         self.inner
-            .query("DELETE discovered WHERE group = $group")
+            .query("DELETE (SELECT id FROM discovered WHERE `group` = $group)")
             .bind(("group", group.to_string()))
             .await?;
         #[cfg(feature = "embeddings")]
         self.inner
-            .query("DELETE chunk WHERE group = $group")
+            .query("DELETE (SELECT id FROM chunk WHERE `group` = $group)")
             .bind(("group", group.to_string()))
             .await?;
         Ok(())
@@ -72,7 +101,7 @@ impl DbClient {
 }
 
 impl std::ops::Deref for DbClient {
-    type Target = Surreal<Db>;
+    type Target = Surreal<Any>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner

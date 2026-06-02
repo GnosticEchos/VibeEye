@@ -6,7 +6,11 @@ use std::io::Write;
 use super::DbClient;
 
 /// Exports a group's data as `CREATE` statements (no schema).
-pub async fn export_group(db: &DbClient, group: &str, writer: &mut dyn Write) -> Result<()> {
+pub async fn export_group(
+    db: &DbClient,
+    group: &str,
+    writer: &mut (dyn Write + Send),
+) -> Result<()> {
     writeln!(writer, "-- Export for group: {group}")?;
     export_pages(db, group, writer).await?;
     export_links(db, group, writer).await?;
@@ -14,7 +18,7 @@ pub async fn export_group(db: &DbClient, group: &str, writer: &mut dyn Write) ->
     Ok(())
 }
 
-async fn export_pages(db: &DbClient, group: &str, writer: &mut dyn Write) -> Result<()> {
+async fn export_pages(db: &DbClient, group: &str, writer: &mut (dyn Write + Send)) -> Result<()> {
     let pages: Vec<serde_json::Value> = db
         .query("SELECT * FROM page WHERE group = $group")
         .bind(("group", group.to_string()))
@@ -32,15 +36,15 @@ async fn export_pages(db: &DbClient, group: &str, writer: &mut dyn Write) -> Res
 
         writeln!(
             writer,
-            "CREATE page SET group = '{group}', url = '{url}', title = '{title}', \
+            "CREATE page SET `group` = '{group}', url = '{url}', title = '{title}', \
              content = '{content}', depth = {depth}, format = '{format}', \
-             crawled_at = '{crawled_at}'",
+             crawled_at = d'{crawled_at}'",
         )?;
     }
     Ok(())
 }
 
-async fn export_links(db: &DbClient, group: &str, writer: &mut dyn Write) -> Result<()> {
+async fn export_links(db: &DbClient, group: &str, writer: &mut (dyn Write + Send)) -> Result<()> {
     let links: Vec<serde_json::Value> = db
         .query("SELECT * FROM discovered WHERE group = $group")
         .bind(("group", group.to_string()))
@@ -58,13 +62,13 @@ async fn export_links(db: &DbClient, group: &str, writer: &mut dyn Write) -> Res
             writer,
             "RELATE (SELECT id FROM page WHERE url = '{from_url}') ->discovered-> \
              (SELECT id FROM page WHERE url = '{to_url}') \
-             SET group = '{group}', anchor_text = '{anchor}', discovered_at = '{discovered_at}'",
+             SET `group` = '{group}', anchor_text = '{anchor}', discovered_at = d'{discovered_at}'",
         )?;
     }
     Ok(())
 }
 
-async fn export_chunks(db: &DbClient, group: &str, writer: &mut dyn Write) -> Result<()> {
+async fn export_chunks(db: &DbClient, group: &str, writer: &mut (dyn Write + Send)) -> Result<()> {
     let chunks: Vec<serde_json::Value> = db
         .query("SELECT group, page_url, chunk_index, chunk_text, heading_path, model, dimensions, created_at FROM chunk WHERE group = $group")
         .bind(("group", group.to_string()))
@@ -83,14 +87,43 @@ async fn export_chunks(db: &DbClient, group: &str, writer: &mut dyn Write) -> Re
 
         writeln!(
             writer,
-            "CREATE chunk SET group = '{group}', page_url = '{page_url}', chunk_index = {chunk_index}, \
+            "CREATE chunk SET `group` = '{group}', page_url = '{page_url}', chunk_index = {chunk_index}, \
              chunk_text = '{chunk_text}', heading_path = {heading_path}, model = '{model}', \
-             dimensions = {dimensions}, created_at = '{created_at}'",
+             dimensions = {dimensions}, created_at = d'{created_at}'",
         )?;
     }
     Ok(())
 }
 
 fn escape_string(s: &str) -> String {
-    s.replace("'", "\\'")
+    s.replace('\\', "\\\\").replace("'", "\\'")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::escape_string;
+
+    #[test]
+    fn test_escape_string_quotes() {
+        assert_eq!(escape_string("it's"), "it\\'s");
+        assert_eq!(escape_string("don't"), "don\\'t");
+    }
+
+    #[test]
+    fn test_escape_string_backslashes() {
+        assert_eq!(escape_string("C:\\Users\\test"), "C:\\\\Users\\\\test");
+        assert_eq!(escape_string("a\\b"), "a\\\\b");
+    }
+
+    #[test]
+    fn test_escape_string_both() {
+        let input = "It's at C:\\Program Files\\App";
+        let expected = "It\\'s at C:\\\\Program Files\\\\App";
+        assert_eq!(escape_string(input), expected);
+    }
+
+    #[test]
+    fn test_escape_string_no_special_chars() {
+        assert_eq!(escape_string("hello world"), "hello world");
+    }
 }
