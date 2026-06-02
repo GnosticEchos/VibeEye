@@ -21,6 +21,8 @@ pub struct PageRecord {
     pub format: String,
     /// When the page was crawled.
     pub crawled_at: DateTime<Utc>,
+    /// Structured metadata (JSON-LD, Open Graph, IndexedDB dump).
+    pub meta: Option<serde_json::Value>,
 }
 
 /// A discovered link (graph edge) between two pages.

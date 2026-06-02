@@ -1,14 +1,14 @@
 use anyhow::Result;
 use surrealdb::Surreal;
-use surrealdb::engine::local::Db;
+use surrealdb::engine::any::Any;
 
 /// Bootstrap the database schema via versioned migrations.
-pub async fn bootstrap(db: &Surreal<Db>) -> Result<()> {
+pub async fn bootstrap(db: &Surreal<Any>) -> Result<()> {
     super::migrations::run_all(db).await
 }
 
 /// Read a metadata value by key.
-pub async fn get_metadata(db: &Surreal<Db>, key: &str) -> Result<Option<String>> {
+pub async fn get_metadata(db: &Surreal<Any>, key: &str) -> Result<Option<String>> {
     let mut result = db
         .query("SELECT `value` FROM db_metadata WHERE key = $key")
         .bind(("key", key))
@@ -18,7 +18,7 @@ pub async fn get_metadata(db: &Surreal<Db>, key: &str) -> Result<Option<String>>
 }
 
 /// Write a metadata value by key.
-pub async fn set_metadata(db: &Surreal<Db>, key: &str, value: &str) -> Result<()> {
+pub async fn set_metadata(db: &Surreal<Any>, key: &str, value: &str) -> Result<()> {
     db.query("UPSERT db_metadata SET `value` = $value, updated_at = time::now() WHERE key = $key")
         .bind(("key", key))
         .bind(("value", value))
@@ -30,7 +30,7 @@ pub async fn set_metadata(db: &Surreal<Db>, key: &str, value: &str) -> Result<()
 ///
 /// If the dimension has changed, drops the old index and all chunks,
 /// then recreates with the new dimension.
-pub async fn ensure_hnsw_index(db: &Surreal<Db>, dimension: usize) -> Result<()> {
+pub async fn ensure_hnsw_index(db: &Surreal<Any>, dimension: usize) -> Result<()> {
     let current = get_metadata(db, "hnsw_dimension").await?;
     if current.as_deref() == Some(&dimension.to_string()) {
         return Ok(());

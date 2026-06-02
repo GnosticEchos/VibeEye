@@ -41,6 +41,7 @@ impl SurrealOutput {
             depth: result.depth as i32,
             format: result.format.clone(),
             crawled_at: Utc::now(),
+            meta: result.meta.clone(),
         };
         self.client.insert_page(&record).await
     }
@@ -109,7 +110,9 @@ impl SurrealOutput {
 
         let eligible: Vec<_> = results
             .iter()
-            .filter(|r| r.error.is_none() && !r.content.trim().is_empty() && page_ids.contains_key(&r.url))
+            .filter(|r| {
+                r.error.is_none() && !r.content.trim().is_empty() && page_ids.contains_key(&r.url)
+            })
             .collect();
 
         if eligible.is_empty() {

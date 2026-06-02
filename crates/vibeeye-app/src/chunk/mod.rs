@@ -154,7 +154,11 @@ fn extract_overlap(current: &str, overlap_tokens: usize) -> String {
         return current.to_string();
     }
     let skip = char_count - overlap_chars;
-    let start = current.char_indices().nth(skip).map(|(i, _)| i).unwrap_or(0);
+    let start = current
+        .char_indices()
+        .nth(skip)
+        .map(|(i, _)| i)
+        .unwrap_or(0);
     current[start..].to_string()
 }
 
