@@ -13,7 +13,7 @@ use servo::{
 };
 use servo::{RenderingContext, SoftwareRenderingContext};
 use tokio::sync::oneshot;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 use url::Url;
 
 use crate::{AppError, Result};
@@ -30,6 +30,13 @@ pub(crate) enum EngineCommand {
     },
     GetText {
         respond: oneshot::Sender<Result<String>>,
+    },
+    EvalJs {
+        script: String,
+        respond: oneshot::Sender<Result<String>>,
+    },
+    GetDomLinks {
+        respond: oneshot::Sender<Result<Vec<String>>>,
     },
     Shutdown,
 }
@@ -105,6 +112,29 @@ impl ServoEngine {
             .map_err(|e| VibeError::Engine(format!("recv get_text: {e}")))?
     }
 
+    /// Evaluate arbitrary JavaScript in the current page context.
+    pub async fn eval_js(&self, script: &str) -> Result<String> {
+        let (tx, rx) = oneshot::channel();
+        self.cmd_tx
+            .send(EngineCommand::EvalJs {
+                script: script.to_string(),
+                respond: tx,
+            })
+            .map_err(|e| VibeError::Engine(format!("send eval_js: {e}")))?;
+        rx.await
+            .map_err(|e| VibeError::Engine(format!("recv eval_js: {e}")))?
+    }
+
+    /// Get all link URLs from the live DOM after JavaScript execution.
+    pub async fn get_dom_links(&self) -> Result<Vec<String>> {
+        let (tx, rx) = oneshot::channel();
+        self.cmd_tx
+            .send(EngineCommand::GetDomLinks { respond: tx })
+            .map_err(|e| VibeError::Engine(format!("send get_dom_links: {e}")))?;
+        rx.await
+            .map_err(|e| VibeError::Engine(format!("recv get_dom_links: {e}")))?
+    }
+
     /// Gracefully shut down the engine thread and wait for it to finish.
     pub fn shutdown(&mut self) {
         let _ = self.cmd_tx.send(EngineCommand::Shutdown);
@@ -173,9 +203,16 @@ fn run_engine(
         .make_current()
         .map_err(|e| VibeError::Engine(format!("make_current: {e:?}")))?;
 
+    let devtools_enabled = std::env::var("VIBEYE_DEVTOOLS").is_ok();
     let preferences = Preferences {
         network_http_proxy_uri: String::new(),
         network_https_proxy_uri: String::new(),
+        devtools_server_enabled: devtools_enabled,
+        devtools_server_listen_address: if devtools_enabled {
+            "127.0.0.1:0".to_string()
+        } else {
+            String::new()
+        },
         ..Preferences::default()
     };
 
@@ -236,6 +273,16 @@ fn handle_command(
         }
         EngineCommand::GetText { respond } => {
             let result = get_text_cmd(servo, active_webview);
+            let _ = respond.send(result);
+            true
+        }
+        EngineCommand::EvalJs { script, respond } => {
+            let result = eval_js_cmd(servo, active_webview, &script);
+            let _ = respond.send(result);
+            true
+        }
+        EngineCommand::GetDomLinks { respond } => {
+            let result = get_dom_links_cmd(servo, active_webview);
             let _ = respond.send(result);
             true
         }
@@ -301,6 +348,68 @@ fn get_text_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<Strin
 
     let result = crate::browser::navigation::extract_text(servo, webview)?;
     Ok(result)
+}
+
+fn eval_js_cmd(servo: &Servo, active_webview: &Option<WebView>, script: &str) -> Result<String> {
+    let webview = active_webview
+        .as_ref()
+        .ok_or_else(|| VibeError::Engine("no active webview".to_string()))?;
+
+    let result_slot: Arc<
+        Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>,
+    > = Arc::new(Mutex::new(None));
+
+    let slot = result_slot.clone();
+    webview.evaluate_javascript(script, move |result| {
+        let mut guard = slot.lock().unwrap();
+        *guard = Some(result.map(|v| match v {
+            servo::JSValue::String(s) => s,
+            other => format!("{other:?}"),
+        }));
+    });
+
+    while result_slot.lock().unwrap().is_none() {
+        servo.spin_event_loop();
+        std::thread::yield_now();
+    }
+
+    let guard = result_slot.lock().unwrap();
+    let js_result = guard
+        .as_ref()
+        .expect("result populated by callback")
+        .as_ref()
+        .map_err(|e| VibeError::Extraction(format!("JS eval error: {e:?}")))?
+        .clone();
+
+    trace!(
+        script_len = script.len(),
+        result_len = js_result.len(),
+        "eval_js done"
+    );
+    Ok(js_result)
+}
+
+fn get_dom_links_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<Vec<String>> {
+    let script = r#"
+        Array.from(document.querySelectorAll('a[href]'))
+            .map(a => a.href)
+            .filter(h => h && !h.startsWith('javascript:') && !h.startsWith('#'))
+    "#;
+
+    let result = eval_js_cmd(servo, active_webview, script)?;
+
+    // The result is a JS array serialized by SpiderMonkey.
+    // In practice servo::JSValue::to_string() on arrays gives something like
+    // "https://a.com,https://b.com" or "a,b" — handle both.
+    let links: Vec<String> = result
+        .trim_matches(['[', ']'])
+        .split(',')
+        .map(|s| s.trim().trim_matches('"').to_string())
+        .filter(|s| !s.is_empty() && s.starts_with("http"))
+        .collect();
+
+    trace!(link_count = links.len(), "extracted dom links");
+    Ok(links)
 }
 
 // ------------------------------------------------------------------

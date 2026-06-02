@@ -10,13 +10,28 @@ pub mod navigation;
 
 use engine::ServoEngine;
 
+/// Process-wide singleton engine pool.
+///
+/// Servo contains process-wide singletons (Opts, rustls CryptoProvider) and
+/// background C++ threads that cannot be reliably torn down. Creating a second
+/// engine instance causes init timeouts. We therefore keep exactly one engine
+/// alive for the lifetime of the process and loan it out to sessions.
+static GLOBAL_ENGINE: std::sync::OnceLock<std::sync::Mutex<Option<ServoEngine>>> =
+    std::sync::OnceLock::new();
+
+/// Returns true when running inside `cargo test` or when the
+/// `VIBEYE_TEST_STUB` environment variable is set.
+///
+/// Integration tests in `tests/` compile the library without `cfg(test)`,
+/// so we also check the env var to allow them to opt into stub mode.
+fn is_test_mode() -> bool {
+    cfg!(test) || std::env::var("VIBEYE_TEST_STUB").is_ok()
+}
+
 /// Browser session handle
 ///
-/// Each session owns a dedicated `ServoEngine` thread when the engine is
-/// available. If Servo cannot be initialised (e.g. missing Mesa drivers
-/// or running in a test environment) the session transparently falls back
-/// to a stub backend. Sessions are intentionally short-lived: one session
-/// per tool invocation.
+/// Sessions borrow the process-wide `ServoEngine` singleton. When a session
+/// is dropped the engine is returned to the pool so the next call can reuse it.
 pub struct BrowserSession {
     engine: Option<ServoEngine>,
     nav_state: NavigationState,
@@ -25,25 +40,36 @@ pub struct BrowserSession {
 impl BrowserSession {
     /// Create a new browser session with default headless viewport.
     pub fn new() -> Result<Self> {
-        // In tests we always use the stub backend.  Servo contains
-        // process-wide singletons (Opts, rustls CryptoProvider) and
-        // background threads that cannot be reliably torn down between
-        // tests, so attempting real initialisation causes hangs and
-        // cross-test pollution.
-        #[cfg(test)]
-        let engine = None;
+        // In tests we skip real initialisation to avoid cross-test
+        // pollution from Servo's process-wide singletons.
+        if is_test_mode() {
+            return Ok(Self {
+                engine: None,
+                nav_state: NavigationState::default(),
+            });
+        }
 
-        #[cfg(not(test))]
-        let engine = match ServoEngine::new(vibeeye_core::Viewport::default()) {
-            Ok(engine) => {
-                tracing::debug!("Servo engine initialised");
-                Some(engine)
-            }
-            Err(e) => {
-                tracing::warn!("Servo engine unavailable, using stub backend: {e}");
-                None
-            }
+        let engine = {
+            let mutex = GLOBAL_ENGINE.get_or_init(|| {
+                match ServoEngine::new(vibeeye_core::Viewport::default()) {
+                    Ok(engine) => {
+                        tracing::debug!("Servo engine initialised");
+                        std::sync::Mutex::new(Some(engine))
+                    }
+                    Err(e) => {
+                        tracing::error!("Servo engine init failed: {e}");
+                        std::sync::Mutex::new(None)
+                    }
+                }
+            });
+            mutex.lock().unwrap().take()
         };
+
+        if engine.is_none() && !is_test_mode() {
+            return Err(crate::AppError::Browser(
+                "Browser engine unavailable (init failed or already in use)".to_string(),
+            ));
+        }
 
         Ok(Self {
             engine,
@@ -61,10 +87,13 @@ impl BrowserSession {
                 .await
                 .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
             self.nav_state.current_url = Some(final_url);
-        } else {
-            // Stub: no real navigation, just record the URL
+        } else if is_test_mode() {
+            // Test stub: accept the URL as-is
             self.nav_state.current_url = Some(url.to_string());
-            self.nav_state.history_stack.push(url.to_string());
+        } else {
+            return Err(crate::AppError::Browser(
+                "Browser engine unavailable".to_string(),
+            ));
         }
 
         self.nav_state.pending_url = None;
@@ -83,11 +112,15 @@ impl BrowserSession {
                 .get_html()
                 .await
                 .map_err(|e| crate::AppError::Browser(e.to_string()))
-        } else {
-            // Stub: returns placeholder HTML
+        } else if is_test_mode() {
+            // Test stub: return minimal placeholder HTML
+            let url = self.current_url().unwrap_or("unknown");
             Ok(format!(
-                "<html><head><title>VibeEye</title></head><body>Navigated to: {}</body></html>",
-                self.current_url().unwrap_or("unknown")
+                "<html><head><title>Test</title></head><body>Navigated to: {url}</body></html>"
+            ))
+        } else {
+            Err(crate::AppError::Browser(
+                "Browser engine unavailable".to_string(),
             ))
         }
     }
@@ -99,19 +132,67 @@ impl BrowserSession {
                 .get_text()
                 .await
                 .map_err(|e| crate::AppError::Browser(e.to_string()))
+        } else if is_test_mode() {
+            // Test stub: return simple text
+            let url = self.current_url().unwrap_or("unknown");
+            Ok(format!("Navigated to: {url}"))
         } else {
-            // Stub: simple HTML strip
-            let html = self.get_html().await?;
-            Ok(html.replace(['<', '>', '/'], " "))
+            Err(crate::AppError::Browser(
+                "Browser engine unavailable".to_string(),
+            ))
         }
     }
 
-    /// Close the browser session, shutting down the engine thread.
-    pub async fn close(self) -> Result<()> {
-        if let Some(mut engine) = self.engine {
-            engine.shutdown();
+    /// Evaluate arbitrary JavaScript in the current page context.
+    pub async fn eval_js(&self, script: &str) -> Result<String> {
+        if let Some(ref engine) = self.engine {
+            engine
+                .eval_js(script)
+                .await
+                .map_err(|e| crate::AppError::Browser(e.to_string()))
+        } else if is_test_mode() {
+            // Test stub: echo the script
+            Ok(format!("// test eval: {script}"))
+        } else {
+            Err(crate::AppError::Browser(
+                "Browser engine unavailable".to_string(),
+            ))
         }
+    }
+
+    /// Get all link URLs from the live DOM (post-JavaScript execution).
+    pub async fn get_dom_links(&self) -> Result<Vec<String>> {
+        if let Some(ref engine) = self.engine {
+            engine
+                .get_dom_links()
+                .await
+                .map_err(|e| crate::AppError::Browser(e.to_string()))
+        } else if is_test_mode() {
+            // Test stub: return empty list
+            Ok(Vec::new())
+        } else {
+            Err(crate::AppError::Browser(
+                "Browser engine unavailable".to_string(),
+            ))
+        }
+    }
+
+    /// Close the browser session, returning the engine to the global pool.
+    pub async fn close(self) -> Result<()> {
+        // Engine is returned to the pool via Drop when this session is dropped.
         Ok(())
+    }
+}
+
+impl Drop for BrowserSession {
+    fn drop(&mut self) {
+        if let Some(engine) = self.engine.take() {
+            if let Some(mutex) = GLOBAL_ENGINE.get() {
+                if let Ok(mut guard) = mutex.lock() {
+                    *guard = Some(engine);
+                }
+            }
+        }
     }
 }
 
