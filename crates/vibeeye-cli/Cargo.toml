@@ -42,6 +42,9 @@ dotenvy = { workspace = true, optional = true }
 # Table formatting for query results
 comfy-table = { workspace = true }
 
+# Low-level exit syscall to bypass SpiderMonkey atexit segfault
+libc = "0.2"
+
 [features]
 default = []
 surrealdb = ["vibeeye-app/surrealdb"]

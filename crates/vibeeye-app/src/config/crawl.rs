@@ -44,7 +44,11 @@ pub struct CrawlProfile {
     pub timeout: Option<u64>,
     pub sitemap: Option<bool>,
     pub output: Option<String>,
+    /// SurrealDB connection URL (e.g. "ws://user:pass@127.0.0.1:8000",
+    /// "surrealkv:///path/to/db", "mem://"). Overrides surrealdb_path.
+    pub db_url: Option<String>,
     /// SurrealDB embedded storage path (e.g. "~/.local/share/vibe-eye/db").
+    /// Deprecated: use db_url instead.
     pub surrealdb_path: Option<String>,
     /// SurrealDB namespace.
     pub surrealdb_ns: Option<String>,
@@ -83,6 +87,7 @@ impl CrawlProfile {
         merge_opt!(self, other, timeout, copy);
         merge_opt!(self, other, sitemap, copy);
         merge_opt!(self, other, output);
+        merge_opt!(self, other, db_url);
         merge_opt!(self, other, surrealdb_path);
         merge_opt!(self, other, surrealdb_ns);
         merge_opt!(self, other, surrealdb_db);

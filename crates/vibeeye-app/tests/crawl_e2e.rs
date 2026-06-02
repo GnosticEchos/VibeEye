@@ -10,8 +10,15 @@ use vibeeye_app::crawl::output::{DirectoryOutput, StdoutOutput};
 use vibeeye_app::crawl::{CrawlOptions, run};
 use vibeeye_core::ContentFormat;
 
+fn setup_test_env() {
+    // SAFETY: set_var in tests is safe because no other threads read
+    // this env var concurrently during test execution.
+    unsafe { std::env::set_var("VIBEYE_TEST_STUB", "1") };
+}
+
 #[tokio::test]
 async fn test_crawl_seed_page_completes() {
+    setup_test_env();
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
         max_depth: 2,
@@ -23,6 +30,7 @@ async fn test_crawl_seed_page_completes() {
         same_origin: true,
         timeout_secs: 5,
         use_sitemap: false,
+        settle_ms: 2000,
         outputs: vec![Arc::new(StdoutOutput)],
     };
 
@@ -36,6 +44,7 @@ async fn test_crawl_seed_page_completes() {
 
 #[tokio::test]
 async fn test_crawl_writes_output_directory() {
+    setup_test_env();
     let temp_dir = tempfile::tempdir().unwrap();
     let output_path = temp_dir.path().join("crawl-output");
 
@@ -50,6 +59,7 @@ async fn test_crawl_writes_output_directory() {
         same_origin: true,
         timeout_secs: 5,
         use_sitemap: false,
+        settle_ms: 2000,
         outputs: vec![Arc::new(DirectoryOutput::new(output_path.clone(), "md"))],
     };
 
@@ -87,6 +97,7 @@ async fn test_crawl_writes_output_directory() {
 
 #[tokio::test]
 async fn test_crawl_respects_max_pages() {
+    setup_test_env();
     let temp_dir = tempfile::tempdir().unwrap();
     let output_path = temp_dir.path().join("crawl-output");
 
@@ -101,6 +112,7 @@ async fn test_crawl_respects_max_pages() {
         same_origin: true,
         timeout_secs: 5,
         use_sitemap: false,
+        settle_ms: 2000,
         outputs: vec![Arc::new(DirectoryOutput::new(output_path.clone(), "html"))],
     };
 
@@ -125,6 +137,7 @@ async fn test_crawl_respects_max_pages() {
 
 #[tokio::test]
 async fn test_crawl_html_format_output() {
+    setup_test_env();
     let temp_dir = tempfile::tempdir().unwrap();
     let output_path = temp_dir.path().join("crawl-output");
 
@@ -139,6 +152,7 @@ async fn test_crawl_html_format_output() {
         same_origin: true,
         timeout_secs: 5,
         use_sitemap: false,
+        settle_ms: 2000,
         outputs: vec![Arc::new(DirectoryOutput::new(output_path.clone(), "html"))],
     };
 
@@ -161,6 +175,7 @@ async fn test_crawl_html_format_output() {
 
 #[tokio::test]
 async fn test_crawl_text_format_output() {
+    setup_test_env();
     let temp_dir = tempfile::tempdir().unwrap();
     let output_path = temp_dir.path().join("crawl-output");
 
@@ -175,6 +190,7 @@ async fn test_crawl_text_format_output() {
         same_origin: true,
         timeout_secs: 5,
         use_sitemap: false,
+        settle_ms: 2000,
         outputs: vec![Arc::new(DirectoryOutput::new(output_path.clone(), "txt"))],
     };
 

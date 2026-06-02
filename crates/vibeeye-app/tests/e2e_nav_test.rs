@@ -7,8 +7,15 @@ use vibeeye_app::{
     BrowseInput, BrowseTool, ExtractInput, ExtractTool, SnapshotInput, SnapshotTool, Tool,
 };
 
+fn setup_test_env() {
+    // SAFETY: set_var in tests is safe because no other threads read
+    // this env var concurrently during test execution.
+    unsafe { std::env::set_var("VIBEYE_TEST_STUB", "1") };
+}
+
 #[tokio::test]
 async fn test_browse_navigate_roundtrip() {
+    setup_test_env();
     let tool = BrowseTool;
     let input = BrowseInput {
         url: "https://example.com".to_string(),
@@ -23,6 +30,7 @@ async fn test_browse_navigate_roundtrip() {
 
 #[tokio::test]
 async fn test_snapshot_returns_html_and_text() {
+    setup_test_env();
     let tool = SnapshotTool;
     let input = SnapshotInput {
         url: "https://example.com/snapshot".to_string(),
@@ -37,6 +45,7 @@ async fn test_snapshot_returns_html_and_text() {
 
 #[tokio::test]
 async fn test_extract_markdown() {
+    setup_test_env();
     let tool = ExtractTool;
     let input = ExtractInput {
         url: "https://example.com/extract".to_string(),
@@ -51,6 +60,7 @@ async fn test_extract_markdown() {
 
 #[tokio::test]
 async fn test_extract_html_passthrough() {
+    setup_test_env();
     let tool = ExtractTool;
     let input = ExtractInput {
         url: "https://example.com/extract".to_string(),
@@ -64,6 +74,7 @@ async fn test_extract_html_passthrough() {
 
 #[tokio::test]
 async fn test_extract_text() {
+    setup_test_env();
     let tool = ExtractTool;
     let input = ExtractInput {
         url: "https://example.com/extract".to_string(),

@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use serde::Serialize;
+use std::io::Write;
 use std::path::PathBuf;
 
 use vibeeye_app::config::CrawlConfig;
@@ -17,6 +18,12 @@ use crate::cli::Commands;
 use crate::cli::{DbCommands, OutputFormat};
 #[cfg(feature = "surrealdb")]
 use crate::format::format_value;
+
+/// Return the SurrealDB connection URL.
+#[cfg(feature = "surrealdb")]
+fn db_url() -> String {
+    vibeeye_app::config::resolve_db_url()
+}
 
 /// Run the selected command
 pub async fn run(command: Commands) -> Result<()> {
@@ -111,9 +118,11 @@ async fn extract(url: String, format: String) -> Result<()> {
 fn print_json<T: Serialize>(value: &T) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(value)?);
     // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
-    // during normal process teardown.  Bypass all destructors and exit
-    // cleanly — this is standard practice for SpiderMonkey embedders.
-    std::process::exit(0);
+    // during normal process teardown.  std::process::exit runs atexit
+    // handlers so we use libc::_exit which bypasses them entirely.
+    std::io::stdout().flush().unwrap();
+    std::io::stderr().flush().unwrap();
+    unsafe { libc::_exit(0) };
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -162,9 +171,11 @@ async fn crawl_command(
 
     crawl::run(opts).await?;
     // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
-    // during normal process teardown.  Bypass all destructors and exit
-    // cleanly — this is standard practice for SpiderMonkey embedders.
-    std::process::exit(0);
+    // during normal process teardown.  std::process::exit runs atexit
+    // handlers so we use libc::_exit which bypasses them entirely.
+    std::io::stdout().flush().unwrap();
+    std::io::stderr().flush().unwrap();
+    unsafe { libc::_exit(0) };
 }
 
 fn load_profile(
@@ -230,10 +241,17 @@ fn build_crawl_options(
         outputs.push(Arc::new(StdoutOutput));
     }
 
+    let effective_max_pages = max_pages.or(profile.max_pages).unwrap_or(100);
+    if max_pages.is_none() && profile.max_pages.is_none() {
+        eprintln!(
+            "⚠️  Using default max-pages=100. Use --max-pages 0 for unlimited, or set max_pages in ~/.config/vibe-eye/crawl.toml"
+        );
+    }
+
     CrawlOptions {
         url,
         max_depth: max_depth.or(profile.max_depth).unwrap_or(2),
-        max_pages: max_pages.or(profile.max_pages).unwrap_or(100),
+        max_pages: effective_max_pages,
         format: content_format,
         respect_robots: respect_robots.or(profile.respect_robots).unwrap_or(false),
         requests_per_second: requests_per_second
@@ -243,6 +261,7 @@ fn build_crawl_options(
         same_origin: same_origin.or(profile.same_origin).unwrap_or(true),
         timeout_secs: timeout.or(profile.timeout).unwrap_or(15),
         use_sitemap: sitemap.or(profile.sitemap).unwrap_or(false),
+        settle_ms: 2000,
         outputs,
     }
 }
@@ -256,11 +275,7 @@ async fn setup_surreal_output(
     if !surrealdb {
         return Ok(None);
     }
-    let db_path = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("vibe-eye")
-        .join("db");
-    let client = vibeeye_app::db::DbClient::connect(&db_path).await?;
+    let client = vibeeye_app::db::DbClient::connect(&db_url()).await?;
     client
         .use_ns_db(
             profile.surrealdb_ns.as_deref().unwrap_or("vibeeye"),
@@ -279,11 +294,7 @@ async fn setup_surreal_output(
 async fn import_command(source: PathBuf, group: String) -> Result<()> {
     use vibeeye_app::db::DbClient;
 
-    let db_path = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("vibe-eye")
-        .join("db");
-    let client = DbClient::connect(&db_path).await?;
+    let client = DbClient::connect(&db_url()).await?;
     client.use_ns_db("vibeeye", "crawl").await?;
 
     let source = if source.extension().and_then(|e| e.to_str()) == Some("surql") {
@@ -303,11 +314,7 @@ async fn import_command(source: PathBuf, group: String) -> Result<()> {
 async fn export_command(target: PathBuf, group: Option<String>) -> Result<()> {
     use vibeeye_app::db::DbClient;
 
-    let db_path = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("vibe-eye")
-        .join("db");
-    let client = DbClient::connect(&db_path).await?;
+    let client = DbClient::connect(&db_url()).await?;
     client.use_ns_db("vibeeye", "crawl").await?;
 
     let mut file = std::fs::File::create(&target)?;
@@ -347,11 +354,7 @@ async fn load_embedding_config() -> Result<vibeeye_app::config::embeddings::Embe
 async fn db_command(command: DbCommands) -> Result<()> {
     use vibeeye_app::db::DbClient;
 
-    let db_path = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("vibe-eye")
-        .join("db");
-    let client = DbClient::connect(&db_path).await?;
+    let client = DbClient::connect(&db_url()).await?;
     client.use_ns_db("vibeeye", "crawl").await?;
 
     match command {

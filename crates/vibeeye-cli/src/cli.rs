@@ -57,7 +57,7 @@ pub enum Commands {
         #[arg(long)]
         max_depth: Option<u32>,
 
-        /// Maximum pages to crawl
+        /// Maximum pages to crawl (0 = unlimited)
         #[arg(long)]
         max_pages: Option<usize>,
 

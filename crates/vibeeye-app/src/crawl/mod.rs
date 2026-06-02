@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::sync::Semaphore;
-use tracing::{info, warn};
+use tracing::{debug, info, trace, warn};
 use url::Url;
 use vibeeye_core::ContentFormat;
 
@@ -40,6 +40,7 @@ pub struct CrawlOptions {
     pub same_origin: bool,
     pub timeout_secs: u64,
     pub use_sitemap: bool,
+    pub settle_ms: u64,
     pub outputs: Vec<std::sync::Arc<dyn output::CrawlOutput>>,
 }
 
@@ -53,6 +54,7 @@ pub struct CrawlResult {
     pub title: Option<String>,
     pub links_found: usize,
     pub error: Option<String>,
+    pub meta: Option<serde_json::Value>,
 }
 
 /// Run a BFS crawl starting from `opts.url`.
@@ -79,7 +81,11 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
 
     while let Some((url, depth)) = queue.pop_front() {
-        if results.len() >= opts.max_pages {
+        if opts.max_pages > 0 && results.len() >= opts.max_pages {
+            info!(
+                "reached max_pages limit ({}) — stopping crawl",
+                opts.max_pages
+            );
             break;
         }
         if !should_crawl_page(depth, &url, &robots, &opts) {
@@ -134,7 +140,9 @@ async fn build_queue(
     if opts.use_sitemap {
         for url in sitemap::fetch_sitemap(origin).await {
             let normalized = normalize_url(&url);
-            if !visited.contains(&normalized) && visited.len() < opts.max_pages {
+            if !visited.contains(&normalized)
+                && (opts.max_pages == 0 || visited.len() < opts.max_pages)
+            {
                 visited.insert(normalized.clone());
                 queue.push_back((normalized, 0));
             }
@@ -218,10 +226,47 @@ async fn fetch_with_session(
             .navigate(url)
             .await
             .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
-        let html = session
+
+        let mut html = session
             .get_html()
             .await
             .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+
+        // Auto-detect SPAs: if initial HTML contains script tags,
+        // scroll-settle to trigger lazy-loading and re-capture.
+        if html.to_lowercase().contains("<script") {
+            debug!(%url, "SPA detected, running settle loop");
+            let max_iterations = 3;
+            let sleep_per_iteration = Duration::from_millis(opts.settle_ms.max(1) / max_iterations);
+
+            for i in 0..max_iterations {
+                let before = session
+                    .eval_js("document.body ? document.body.scrollHeight : 0")
+                    .await
+                    .unwrap_or_else(|_| "0".to_string());
+                session
+                    .eval_js("window.scrollTo(0, document.body.scrollHeight)")
+                    .await
+                    .ok();
+                tokio::time::sleep(sleep_per_iteration).await;
+                let after = session
+                    .eval_js("document.body ? document.body.scrollHeight : 0")
+                    .await
+                    .unwrap_or_else(|_| "0".to_string());
+
+                if before == after {
+                    trace!(iteration = i, "DOM stable after settle");
+                    break;
+                }
+            }
+
+            // Re-capture HTML after settling
+            html = session
+                .get_html()
+                .await
+                .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+        }
+
         let title = crate::extraction::extract_title(&html);
         let current_url = session.current_url().unwrap_or(url).to_string();
         Ok(PageCapture {
@@ -253,6 +298,7 @@ fn error_result(
         title: None,
         links_found: 0,
         error: Some(err.to_string()),
+        meta: None,
     }
 }
 
@@ -267,11 +313,26 @@ fn enqueue_discovered(
     if depth >= opts.max_depth {
         return;
     }
-    for link in extract_links(html, base_url) {
-        if opts.same_origin && !is_same_origin(&link, base_url) {
+    let links = extract_links(html, base_url);
+    enqueue_discovered_links(&links, depth, base_url, opts, visited, queue);
+}
+
+fn enqueue_discovered_links(
+    links: &[String],
+    depth: u32,
+    base_url: &Url,
+    opts: &CrawlOptions,
+    visited: &mut HashSet<String>,
+    queue: &mut VecDeque<(String, u32)>,
+) {
+    if depth >= opts.max_depth {
+        return;
+    }
+    for link in links {
+        if opts.same_origin && !is_same_origin(link, base_url) {
             continue;
         }
-        let normalized = normalize_url(&link);
+        let normalized = normalize_url(link);
         if !visited.contains(&normalized) && visited.len() < MAX_DISCOVERED_URLS {
             visited.insert(normalized.clone());
             queue.push_back((normalized, depth + 1));
@@ -293,8 +354,20 @@ async fn crawl_one_page(
         Err(err) => return error_result(url, depth, &opts.format, &err),
     };
 
-    enqueue_discovered(&capture.html, depth, base_url, opts, visited, queue);
-    extract_and_build(url, depth, capture, opts.format)
+    // Compare raw HTML links vs live DOM links to decide if page is SPA-rendered
+    let raw_links = extract_links(&capture.html, base_url);
+    let dom_links = session.get_dom_links().await.unwrap_or_default();
+    let use_dom = dom_links.len() > raw_links.len().saturating_mul(2) && dom_links.len() > 5;
+
+    if use_dom {
+        debug!(%url, raw = raw_links.len(), dom = dom_links.len(), "using rendered DOM links");
+        enqueue_discovered_links(&dom_links, depth, base_url, opts, visited, queue);
+    } else {
+        enqueue_discovered(&capture.html, depth, base_url, opts, visited, queue);
+    }
+
+    let meta = extract_structured_meta(session).await.ok();
+    extract_and_build(url, depth, capture, opts.format, meta)
 }
 
 fn extract_and_build(
@@ -302,6 +375,7 @@ fn extract_and_build(
     depth: u32,
     capture: PageCapture,
     format: ContentFormat,
+    meta: Option<serde_json::Value>,
 ) -> CrawlResult {
     let links_found = extract_links(
         &capture.html,
@@ -318,6 +392,7 @@ fn extract_and_build(
             title: capture.title,
             links_found,
             error: None,
+            meta,
         },
         Err(e) => CrawlResult {
             url: url.to_string(),
@@ -327,6 +402,7 @@ fn extract_and_build(
             title: capture.title,
             links_found,
             error: Some(e.to_string()),
+            meta,
         },
     }
 }
@@ -346,6 +422,39 @@ fn file_extension(fmt: &ContentFormat) -> &'static str {
         ContentFormat::Html => "html",
         ContentFormat::Text => "txt",
     }
+}
+
+async fn extract_structured_meta(session: &BrowserSession) -> Result<serde_json::Value> {
+    let json_ld = session
+        .eval_js(
+            r#"
+            JSON.stringify(
+                Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+                    .map(s => { try { return JSON.parse(s.innerText); } catch(e) { return null; }})
+                    .filter(x => x !== null)
+            )
+        "#,
+        )
+        .await
+        .unwrap_or_else(|_| "[]".to_string());
+
+    let og = session
+        .eval_js(
+            r#"
+            const props = {};
+            document.querySelectorAll('meta[property^="og:"]').forEach(m => {
+                props[m.getAttribute('property')] = m.getAttribute('content');
+            });
+            JSON.stringify(props);
+        "#,
+        )
+        .await
+        .unwrap_or_else(|_| "{}".to_string());
+
+    Ok(serde_json::json!({
+        "json_ld": serde_json::from_str::<serde_json::Value>(&json_ld).unwrap_or(serde_json::Value::Null),
+        "open_graph": serde_json::from_str::<serde_json::Value>(&og).unwrap_or(serde_json::Value::Null),
+    }))
 }
 
 async fn emit_results(results: &[CrawlResult], opts: &CrawlOptions) -> Result<()> {
@@ -409,6 +518,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         assert!(should_crawl_page(0, "https://example.com/", &robots, &opts));
@@ -435,6 +545,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         assert!(should_crawl_page(
@@ -472,6 +583,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
@@ -508,6 +620,7 @@ mod tests {
             same_origin: false,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
@@ -535,6 +648,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
@@ -566,6 +680,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
         let mut visited = HashSet::new();
@@ -606,6 +721,7 @@ mod tests {
                 title: Some("Page 1".to_string()),
                 links_found: 2,
                 error: None,
+                meta: None,
             },
             CrawlResult {
                 url: "https://example.com/page2".to_string(),
@@ -615,6 +731,7 @@ mod tests {
                 title: Some("Page 2".to_string()),
                 links_found: 0,
                 error: None,
+                meta: None,
             },
         ];
 
@@ -650,6 +767,7 @@ mod tests {
             same_origin: true,
             timeout_secs: 5,
             use_sitemap: false,
+            settle_ms: 2000,
             outputs: vec![std::sync::Arc::new(output::StdoutOutput)],
         };
 
@@ -672,7 +790,13 @@ mod tests {
             title: Some("Test Page".to_string()),
         };
 
-        let result = extract_and_build("https://example.com/", 0, capture, ContentFormat::Markdown);
+        let result = extract_and_build(
+            "https://example.com/",
+            0,
+            capture,
+            ContentFormat::Markdown,
+            None,
+        );
         assert_eq!(result.url, "https://example.com/");
         assert_eq!(result.depth, 0);
         assert_eq!(result.title, Some("Test Page".to_string()));
