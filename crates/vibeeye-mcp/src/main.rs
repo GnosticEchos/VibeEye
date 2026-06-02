@@ -38,7 +38,21 @@ async fn main() -> SdkResult<()> {
     };
 
     let transport = StdioTransport::new(TransportOptions::default())?;
-    let handler = VibeEyeMcpHandler {};
+
+    #[cfg(feature = "surrealdb")]
+    let handler = {
+        let db_url = vibeeye_app::config::resolve_db_url();
+        let client = vibeeye_app::db::DbClient::connect(&db_url)
+            .await
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        client
+            .use_ns_db("vibeeye", "crawl")
+            .await
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        VibeEyeMcpHandler::new(client)
+    };
+    #[cfg(not(feature = "surrealdb"))]
+    let handler = VibeEyeMcpHandler::new();
 
     let server: Arc<ServerRuntime> = server_runtime::create_server(McpServerOptions {
         server_details,

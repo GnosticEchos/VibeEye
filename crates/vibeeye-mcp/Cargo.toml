@@ -27,6 +27,7 @@ async-trait = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+schemars = { workspace = true }
 
 # Error handling
 anyhow = { workspace = true }
@@ -35,6 +36,14 @@ thiserror = { workspace = true }
 # Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+# Directories
+dirs = { workspace = true }
+
+[features]
+default = []
+surrealdb = ["vibeeye-app/surrealdb"]
+embeddings = ["vibeeye-app/embeddings", "surrealdb"]
 
 [dev-dependencies]
 tempfile = { workspace = true }
