@@ -18,3 +18,5 @@
 
 output_testing/*
 target/*
+/surreal_server/
+surreal.db/*
