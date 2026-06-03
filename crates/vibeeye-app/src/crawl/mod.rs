@@ -127,7 +127,7 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
         );
 
         if results.len() >= EMIT_BATCH_SIZE {
-            let batch: Vec<_> = results.drain(..).collect();
+            let batch = std::mem::take(&mut results);
             emit_results(&batch, &opts).await?;
         }
     }

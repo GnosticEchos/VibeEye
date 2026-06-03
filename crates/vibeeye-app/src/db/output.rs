@@ -147,18 +147,18 @@ impl SurrealOutput {
 
             tasks.spawn(async move {
                 let _permit = semaphore.acquire().await;
-                let count = Self::process_page_owned(
-                    &client,
-                    &group,
-                    &result,
-                    &page_id,
-                    &chunker,
-                    &provider,
-                    &detected_dimension,
-                    &config,
-                    &monitor,
-                )
-                .await;
+                let ctx = PageEmbedCtx {
+                    client: &client,
+                    group: &group,
+                    result: &result,
+                    page_id: &page_id,
+                    chunker: &chunker,
+                    provider: &provider,
+                    detected_dimension: &detected_dimension,
+                    config: &config,
+                    monitor: &monitor,
+                };
+                let count = Self::process_page_owned(&ctx).await;
                 total_inserted.fetch_add(count, std::sync::atomic::Ordering::Relaxed);
                 progress.lock().unwrap().inc(1);
                 count
@@ -185,20 +185,10 @@ impl SurrealOutput {
         Ok(())
     }
 
-    async fn process_page_owned(
-        client: &DbClient,
-        group: &str,
-        result: &CrawlResult,
-        page_id: &RecordId,
-        chunker: &crate::chunk::Chunker,
-        provider: &crate::embed::EmbeddingProvider,
-        detected_dimension: &tokio::sync::Mutex<Option<usize>>,
-        config: &crate::config::embeddings::EmbeddingConfig,
-        monitor: &EmbedMonitor,
-    ) -> usize {
-        let _ = client.delete_chunks_for_page(page_id).await;
+    async fn process_page_owned(ctx: &PageEmbedCtx<'_, '_>) -> usize {
+        let _ = ctx.client.delete_chunks_for_page(ctx.page_id).await;
 
-        let chunks = chunker.chunk(&result.content);
+        let chunks = ctx.chunker.chunk(&ctx.result.content);
         if chunks.is_empty() {
             return 0;
         }
@@ -206,26 +196,26 @@ impl SurrealOutput {
         let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
 
         let t0 = std::time::Instant::now();
-        let embeddings = match provider.embed_batch(&texts).await {
+        let embeddings = match ctx.provider.embed_batch(&texts).await {
             Ok(e) => {
-                monitor.record_success(t0.elapsed());
+                ctx.monitor.record_success(t0.elapsed());
                 e
             }
             Err(e) => {
-                monitor.record_error();
-                tracing::warn!(url = %result.url, error = %e, "embedding request failed");
+                ctx.monitor.record_error();
+                tracing::warn!(url = %ctx.result.url, error = %e, "embedding request failed");
                 return 0;
             }
         };
 
         let dim = {
-            let mut dim_guard = detected_dimension.lock().await;
+            let mut dim_guard = ctx.detected_dimension.lock().await;
             if dim_guard.is_none() {
                 if let Some(first) = embeddings.first() {
                     let d = first.len();
                     *dim_guard = Some(d);
                     drop(dim_guard);
-                    let _ = client.ensure_embeddings_index(d).await;
+                    let _ = ctx.client.ensure_embeddings_index(d).await;
                     tracing::info!(dimension = d, "auto-detected embedding dimension");
                     d as i32
                 } else {
@@ -241,27 +231,40 @@ impl SurrealOutput {
             .zip(embeddings)
             .enumerate()
             .map(|(idx, (chunk, embedding))| crate::db::models::ChunkRecord {
-                group: group.to_string(),
-                page: page_id.clone(),
+                group: ctx.group.to_string(),
+                page: ctx.page_id.clone(),
                 chunk_index: idx as i32,
                 chunk_text: chunk.text,
                 heading_path: chunk.heading_path,
                 embedding,
-                model: config.model.clone(),
+                model: ctx.config.model.clone(),
                 dimensions: dim,
                 created_at: chrono::Utc::now(),
             })
             .collect();
 
         let count = records.len();
-        match client.insert_chunks(&records).await {
+        match ctx.client.insert_chunks(&records).await {
             Ok(()) => count,
             Err(e) => {
-                eprintln!("WARN: failed to insert chunks for {}: {}", result.url, e);
+                eprintln!("WARN: failed to insert chunks for {}: {}", ctx.result.url, e);
                 0
             }
         }
     }
+}
+
+#[cfg(feature = "embeddings")]
+struct PageEmbedCtx<'a, 'b> {
+    client: &'a DbClient,
+    group: &'a str,
+    result: &'a CrawlResult,
+    page_id: &'a RecordId,
+    chunker: &'a crate::chunk::Chunker,
+    provider: &'a crate::embed::EmbeddingProvider,
+    detected_dimension: &'a tokio::sync::Mutex<Option<usize>>,
+    config: &'a crate::config::embeddings::EmbeddingConfig,
+    monitor: &'b EmbedMonitor,
 }
 
 #[cfg(feature = "embeddings")]
@@ -291,7 +294,9 @@ impl EmbedMonitor {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.total_latency_ms
             .fetch_add(ms, std::sync::atomic::Ordering::Relaxed);
-        let mut current = self.max_latency_ms.load(std::sync::atomic::Ordering::Relaxed);
+        let mut current = self
+            .max_latency_ms
+            .load(std::sync::atomic::Ordering::Relaxed);
         while ms > current {
             match self.max_latency_ms.compare_exchange_weak(
                 current,
@@ -317,8 +322,13 @@ impl EmbedMonitor {
         if total == 0 {
             return;
         }
-        let avg_ms = self.total_latency_ms.load(std::sync::atomic::Ordering::Relaxed) / successes.max(1);
-        let max_ms = self.max_latency_ms.load(std::sync::atomic::Ordering::Relaxed);
+        let avg_ms = self
+            .total_latency_ms
+            .load(std::sync::atomic::Ordering::Relaxed)
+            / successes.max(1);
+        let max_ms = self
+            .max_latency_ms
+            .load(std::sync::atomic::Ordering::Relaxed);
         let error_rate = (errors as f64 / total as f64) * 100.0;
 
         let health = if error_rate > 10.0 {

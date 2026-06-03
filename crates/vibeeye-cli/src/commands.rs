@@ -511,11 +511,7 @@ mod tests {
 
     #[test]
     fn test_build_outputs_stdout_fallback() {
-        let outputs = call_build_outputs(
-            ContentFormat::Markdown,
-            None,
-            &CrawlProfile::default(),
-        );
+        let outputs = call_build_outputs(ContentFormat::Markdown, None, &CrawlProfile::default());
         assert_eq!(outputs.len(), 1);
     }
 
@@ -531,8 +527,10 @@ mod tests {
 
     #[test]
     fn test_build_outputs_profile_dir_fallback() {
-        let mut profile = CrawlProfile::default();
-        profile.output = Some("/tmp/profile_out".to_string());
+        let profile = CrawlProfile {
+            output: Some("/tmp/profile_out".to_string()),
+            ..Default::default()
+        };
         let outputs = call_build_outputs(ContentFormat::Text, None, &profile);
         assert_eq!(outputs.len(), 1);
     }
