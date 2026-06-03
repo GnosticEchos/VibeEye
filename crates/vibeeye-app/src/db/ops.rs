@@ -52,45 +52,64 @@ fn extract_match_snippet(content: &str, query: &str, max_len: usize) -> String {
 impl DbClient {
     /// Insert or update a crawled page record.
     ///
-    /// Uses `UPSERT` with the composite unique index `(url, group)` so repeated
-    /// crawls of the same URL within a group update the existing record.
-    /// Returns the RecordId of the upserted page.
+    /// SurrealDB v3 UPSERT over WebSocket returns empty results with parameter
+    /// binding, so we SELECT first, then CREATE or UPDATE.
     pub async fn insert_page(&self, record: &PageRecord) -> Result<surrealdb::types::RecordId> {
-        // SurrealDB v3 has a bug where UPSERT over WebSocket returns empty results
-        // when using parameter binding. Workaround: SELECT first, then CREATE or UPDATE.
-        let mut result = self
-            .query("SELECT id FROM page WHERE url = $url AND `group` = $group LIMIT 1")
-            .bind(("url", record.url.clone()))
-            .bind(("group", record.group.clone()))
-            .await?;
-        let existing: Vec<serde_json::Value> = result.take(0)?;
-
-        if let Some(id_val) = existing.into_iter().next() {
-            // Record exists — update it
-            let id_str = id_val["id"]
-                .as_str()
-                .map(|s| s.to_string())
-                .ok_or_else(|| anyhow::anyhow!("invalid id after select"))?;
-            let id = surrealdb::types::RecordId::parse_simple(&id_str)?;
-            self.query(
-                "UPDATE $id SET `group` = $group, url = $url, title = $title,
-                 content = $content, depth = $depth, format = $format,
-                 crawled_at = $crawled_at, meta = $meta",
-            )
-            .bind(("id", id.clone()))
-            .bind(("group", record.group.clone()))
-            .bind(("url", record.url.clone()))
-            .bind(("title", record.title.clone()))
-            .bind(("content", record.content.clone()))
-            .bind(("depth", record.depth))
-            .bind(("format", record.format.clone()))
-            .bind(("crawled_at", record.crawled_at))
-            .bind(("meta", record.meta.clone()))
-            .await?;
+        if let Some(id) = self.find_page_id(&record.url, &record.group).await? {
+            self.update_page(id.clone(), record).await?;
             return Ok(id);
         }
+        self.create_page(record).await
+    }
 
-        // Record does not exist — create it
+    /// Look up an existing page record by URL and group.
+    async fn find_page_id(
+        &self,
+        url: &str,
+        group: &str,
+    ) -> Result<Option<surrealdb::types::RecordId>> {
+        let mut result = self
+            .query("SELECT id FROM page WHERE url = $url AND `group` = $group LIMIT 1")
+            .bind(("url", url.to_string()))
+            .bind(("group", group.to_string()))
+            .await?;
+        let existing: Vec<serde_json::Value> = result.take(0)?;
+        let Some(id_val) = existing.into_iter().next() else {
+            return Ok(None);
+        };
+        let id_str = id_val["id"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| anyhow::anyhow!("invalid id after select"))?;
+        Ok(Some(surrealdb::types::RecordId::parse_simple(&id_str)?))
+    }
+
+    /// Update an existing page record.
+    async fn update_page(
+        &self,
+        id: surrealdb::types::RecordId,
+        record: &PageRecord,
+    ) -> Result<()> {
+        self.query(
+            "UPDATE $id SET `group` = $group, url = $url, title = $title,
+             content = $content, depth = $depth, format = $format,
+             crawled_at = $crawled_at, meta = $meta",
+        )
+        .bind(("id", id))
+        .bind(("group", record.group.clone()))
+        .bind(("url", record.url.clone()))
+        .bind(("title", record.title.clone()))
+        .bind(("content", record.content.clone()))
+        .bind(("depth", record.depth))
+        .bind(("format", record.format.clone()))
+        .bind(("crawled_at", record.crawled_at))
+        .bind(("meta", record.meta.clone()))
+        .await?;
+        Ok(())
+    }
+
+    /// Create a new page record.
+    async fn create_page(&self, record: &PageRecord) -> Result<surrealdb::types::RecordId> {
         let mut result = self
             .query(
                 "CREATE page SET `group` = $group, url = $url, title = $title,
