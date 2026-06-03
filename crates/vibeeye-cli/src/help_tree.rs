@@ -828,4 +828,77 @@ mod tests {
         assert!(line.contains("my-flag"));
         assert!(line.contains("A custom flag without short/long"));
     }
+
+    // ── process_one_arg tests ───────────────────────────────────────────
+
+    #[test]
+    fn test_process_help_tree_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["--help-tree".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 0);
+        assert!(state.help_tree);
+    }
+
+    #[test]
+    fn test_process_tree_all_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["-a".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 0);
+        assert!(state.tree_all);
+    }
+
+    #[test]
+    fn test_process_depth_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["-L".into(), "3".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 1);
+        assert_eq!(state.depth_limit, Some(3));
+    }
+
+    #[test]
+    fn test_process_ignore_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["-I".into(), "help".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 1);
+        assert_eq!(state.ignore, vec!["help"]);
+    }
+
+    #[test]
+    fn test_process_format_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["-f".into(), "json".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 1);
+        assert_eq!(state.output, Some(HelpTreeOutputFormat::Json));
+    }
+
+    #[test]
+    fn test_process_tree_output_flag() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["--tree-output".into(), "json".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 1);
+        assert_eq!(state.output, Some(HelpTreeOutputFormat::Json));
+    }
+
+    #[test]
+    fn test_process_unknown_flag_ignored() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["--unknown-flag".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 0);
+    }
+
+    #[test]
+    fn test_process_path_token() {
+        let mut state = ParseState::default();
+        let argv: Vec<String> = vec!["navigate".into()];
+        let idx = process_one_arg(&mut state, &argv, 0).unwrap();
+        assert_eq!(idx, 0);
+        assert_eq!(state.path, vec!["navigate"]);
+    }
 }

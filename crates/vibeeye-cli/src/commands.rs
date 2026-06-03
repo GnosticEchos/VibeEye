@@ -489,3 +489,104 @@ async fn db_reset_all(client: &vibeeye_app::db::DbClient) -> Result<()> {
     println!("Reset all groups");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vibeeye_app::config::CrawlProfile;
+    use vibeeye_core::ContentFormat;
+
+    // ── build_outputs tests ─────────────────────────────────────────────
+
+    fn call_build_outputs(
+        format: ContentFormat,
+        output: Option<PathBuf>,
+        profile: &CrawlProfile,
+    ) -> Vec<std::sync::Arc<dyn vibeeye_app::crawl::output::CrawlOutput>> {
+        #[cfg(feature = "surrealdb")]
+        return build_outputs(format, output, profile, None, false);
+        #[cfg(not(feature = "surrealdb"))]
+        return build_outputs(format, output, profile);
+    }
+
+    #[test]
+    fn test_build_outputs_stdout_fallback() {
+        let outputs = call_build_outputs(
+            ContentFormat::Markdown,
+            None,
+            &CrawlProfile::default(),
+        );
+        assert_eq!(outputs.len(), 1);
+    }
+
+    #[test]
+    fn test_build_outputs_directory() {
+        let outputs = call_build_outputs(
+            ContentFormat::Html,
+            Some(PathBuf::from("/tmp/out")),
+            &CrawlProfile::default(),
+        );
+        assert_eq!(outputs.len(), 1);
+    }
+
+    #[test]
+    fn test_build_outputs_profile_dir_fallback() {
+        let mut profile = CrawlProfile::default();
+        profile.output = Some("/tmp/profile_out".to_string());
+        let outputs = call_build_outputs(ContentFormat::Text, None, &profile);
+        assert_eq!(outputs.len(), 1);
+    }
+
+    // ── DB command tests ────────────────────────────────────────────────
+
+    #[cfg(feature = "surrealdb")]
+    mod db_tests {
+        use super::*;
+        use vibeeye_app::db::DbClient;
+
+        async fn setup_db() -> Result<DbClient> {
+            let db = DbClient::connect_mem().await?;
+            db.use_ns_db("vibeeye", "crawl").await?;
+            db.bootstrap().await?;
+            Ok(db)
+        }
+
+        #[tokio::test]
+        async fn test_db_list_empty() -> Result<()> {
+            let client = setup_db().await?;
+            db_list(&client).await?;
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_db_status_empty() -> Result<()> {
+            let client = setup_db().await?;
+            db_status(&client, "test-group").await?;
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_db_reset_nonexistent() -> Result<()> {
+            let client = setup_db().await?;
+            db_reset(&client, "nonexistent").await?;
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_db_reset_all_empty() -> Result<()> {
+            let client = setup_db().await?;
+            db_reset_all(&client).await?;
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn test_export_command_single_group() -> Result<()> {
+            let client = setup_db().await?;
+            let mut buf = Vec::new();
+            vibeeye_app::db::export::export_group(&client, "test", &mut buf).await?;
+            let output = String::from_utf8(buf).unwrap();
+            assert!(output.contains("Export for group: test"));
+            Ok(())
+        }
+    }
+}
