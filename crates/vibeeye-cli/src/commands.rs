@@ -213,33 +213,15 @@ fn build_crawl_options(
     #[cfg(feature = "surrealdb")] surreal_output: Option<vibeeye_app::db::SurrealOutput>,
     #[cfg(feature = "embeddings")] embed: bool,
 ) -> CrawlOptions {
-    use std::sync::Arc;
-    use vibeeye_app::crawl::output::{CrawlOutput, DirectoryOutput, StdoutOutput};
-
-    let mut outputs: Vec<Arc<dyn CrawlOutput>> = Vec::new();
-
-    #[cfg(feature = "surrealdb")]
-    if let Some(mut surreal) = surreal_output {
+    let outputs = build_outputs(
+        content_format,
+        output,
+        &profile,
+        #[cfg(feature = "surrealdb")]
+        surreal_output,
         #[cfg(feature = "embeddings")]
-        if embed {
-            surreal.embed_config = profile.embeddings.clone();
-        }
-        outputs.push(Arc::new(surreal));
-    }
-
-    let dir = output.or_else(|| profile.output.map(PathBuf::from));
-    if let Some(dir) = dir {
-        let ext = match content_format {
-            ContentFormat::Markdown => "md",
-            ContentFormat::Html => "html",
-            ContentFormat::Text => "txt",
-        };
-        outputs.push(Arc::new(DirectoryOutput::new(dir, ext)));
-    }
-
-    if outputs.is_empty() {
-        outputs.push(Arc::new(StdoutOutput));
-    }
+        embed,
+    );
 
     let effective_max_pages = max_pages.or(profile.max_pages).unwrap_or(100);
     if max_pages.is_none() && profile.max_pages.is_none() {
@@ -264,6 +246,44 @@ fn build_crawl_options(
         settle_ms: 2000,
         outputs,
     }
+}
+
+fn build_outputs(
+    content_format: ContentFormat,
+    output: Option<PathBuf>,
+    profile: &vibeeye_app::config::CrawlProfile,
+    #[cfg(feature = "surrealdb")] surreal_output: Option<vibeeye_app::db::SurrealOutput>,
+    #[cfg(feature = "embeddings")] embed: bool,
+) -> Vec<std::sync::Arc<dyn vibeeye_app::crawl::output::CrawlOutput>> {
+    use std::sync::Arc;
+    use vibeeye_app::crawl::output::{CrawlOutput, DirectoryOutput, StdoutOutput};
+
+    let mut outputs: Vec<Arc<dyn CrawlOutput>> = Vec::new();
+
+    #[cfg(feature = "surrealdb")]
+    if let Some(mut surreal) = surreal_output {
+        #[cfg(feature = "embeddings")]
+        if embed {
+            surreal.embed_config = profile.embeddings.clone();
+        }
+        outputs.push(Arc::new(surreal));
+    }
+
+    let dir = output.or_else(|| profile.output.clone().map(PathBuf::from));
+    if let Some(dir) = dir {
+        let ext = match content_format {
+            ContentFormat::Markdown => "md",
+            ContentFormat::Html => "html",
+            ContentFormat::Text => "txt",
+        };
+        outputs.push(Arc::new(DirectoryOutput::new(dir, ext)));
+    }
+
+    if outputs.is_empty() {
+        outputs.push(Arc::new(StdoutOutput));
+    }
+
+    outputs
 }
 
 #[cfg(feature = "surrealdb")]
