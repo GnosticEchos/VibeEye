@@ -358,44 +358,21 @@ async fn db_command(command: DbCommands) -> Result<()> {
     client.use_ns_db("vibeeye", "crawl").await?;
 
     match command {
-        DbCommands::List => {
-            let groups = client.list_groups().await?;
-            println!(
-                "{}",
-                format_value(&serde_json::to_value(&groups)?, OutputFormat::Json)
-            );
-        }
-        DbCommands::Status { group } => {
-            let stats = client.group_stats(&group).await?;
-            println!(
-                "{}",
-                format_value(&serde_json::to_value(&stats)?, OutputFormat::Json)
-            );
-        }
+        DbCommands::List => db_list(&client).await,
+        DbCommands::Status { group } => db_status(&client, &group).await,
         DbCommands::Query {
             query,
             group,
             limit,
             format,
-        } => {
-            let results = client.bm25_search(group.as_deref(), &query, limit).await?;
-            println!("{}", format_value(&serde_json::to_value(&results)?, format));
-        }
+        } => db_query(&client, query, group, limit, format).await,
         #[cfg(feature = "embeddings")]
         DbCommands::Vector {
             query,
             group,
             limit,
             format,
-        } => {
-            let config = load_embedding_config().await?;
-            let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
-            let embedding = provider.embed_single(&query).await?;
-            let results = client
-                .knn_search(group.as_deref(), &embedding, limit)
-                .await?;
-            println!("{}", format_value(&serde_json::to_value(&results)?, format));
-        }
+        } => db_vector(&client, query, group, limit, format).await,
         #[cfg(feature = "embeddings")]
         DbCommands::Hybrid {
             query,
@@ -403,23 +380,92 @@ async fn db_command(command: DbCommands) -> Result<()> {
             limit,
             bm25_limit,
             format,
-        } => {
-            let config = load_embedding_config().await?;
-            let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
-            let embedding = provider.embed_single(&query).await?;
-            let results = client
-                .hybrid_search(group.as_deref(), &query, &embedding, bm25_limit, limit)
-                .await?;
-            println!("{}", format_value(&serde_json::to_value(&results)?, format));
-        }
-        DbCommands::Reset { group } => {
-            client.reset_group(&group).await?;
-            println!("Reset group: {}", group);
-        }
-        DbCommands::ResetAll => {
-            client.reset_all().await?;
-            println!("Reset all groups");
-        }
+        } => db_hybrid(&client, query, group, limit, bm25_limit, format).await,
+        DbCommands::Reset { group } => db_reset(&client, &group).await,
+        DbCommands::ResetAll => db_reset_all(&client).await,
     }
+}
+
+#[cfg(feature = "surrealdb")]
+async fn db_list(client: &vibeeye_app::db::DbClient) -> Result<()> {
+    let groups = client.list_groups().await?;
+    println!(
+        "{}",
+        format_value(&serde_json::to_value(&groups)?, OutputFormat::Json)
+    );
+    Ok(())
+}
+
+#[cfg(feature = "surrealdb")]
+async fn db_status(client: &vibeeye_app::db::DbClient, group: &str) -> Result<()> {
+    let stats = client.group_stats(group).await?;
+    println!(
+        "{}",
+        format_value(&serde_json::to_value(&stats)?, OutputFormat::Json)
+    );
+    Ok(())
+}
+
+#[cfg(feature = "surrealdb")]
+async fn db_query(
+    client: &vibeeye_app::db::DbClient,
+    query: String,
+    group: Option<String>,
+    limit: usize,
+    format: OutputFormat,
+) -> Result<()> {
+    let results = client.bm25_search(group.as_deref(), &query, limit).await?;
+    println!("{}", format_value(&serde_json::to_value(&results)?, format));
+    Ok(())
+}
+
+#[cfg(all(feature = "surrealdb", feature = "embeddings"))]
+async fn db_vector(
+    client: &vibeeye_app::db::DbClient,
+    query: String,
+    group: Option<String>,
+    limit: usize,
+    format: OutputFormat,
+) -> Result<()> {
+    let config = load_embedding_config().await?;
+    let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
+    let embedding = provider.embed_single(&query).await?;
+    let results = client
+        .knn_search(group.as_deref(), &embedding, limit)
+        .await?;
+    println!("{}", format_value(&serde_json::to_value(&results)?, format));
+    Ok(())
+}
+
+#[cfg(all(feature = "surrealdb", feature = "embeddings"))]
+async fn db_hybrid(
+    client: &vibeeye_app::db::DbClient,
+    query: String,
+    group: Option<String>,
+    limit: usize,
+    bm25_limit: usize,
+    format: OutputFormat,
+) -> Result<()> {
+    let config = load_embedding_config().await?;
+    let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
+    let embedding = provider.embed_single(&query).await?;
+    let results = client
+        .hybrid_search(group.as_deref(), &query, &embedding, bm25_limit, limit)
+        .await?;
+    println!("{}", format_value(&serde_json::to_value(&results)?, format));
+    Ok(())
+}
+
+#[cfg(feature = "surrealdb")]
+async fn db_reset(client: &vibeeye_app::db::DbClient, group: &str) -> Result<()> {
+    client.reset_group(group).await?;
+    println!("Reset group: {}", group);
+    Ok(())
+}
+
+#[cfg(feature = "surrealdb")]
+async fn db_reset_all(client: &vibeeye_app::db::DbClient) -> Result<()> {
+    client.reset_all().await?;
+    println!("Reset all groups");
     Ok(())
 }
