@@ -89,33 +89,63 @@ impl ServerHandler for VibeEyeMcpHandler {
         _runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<CallToolResult, CallToolError> {
         let arguments = params.arguments.unwrap_or_default();
-        match params.name.as_str() {
-            "browser_navigate" => call_navigate(arguments).await,
-            "browser_snapshot" => call_snapshot(arguments).await,
-            "browser_extract" => call_extract(arguments).await,
+        let name = params.name.as_str();
+        if name.starts_with("browser_") {
+            dispatch_browser(name, arguments).await
+        } else if name.starts_with("db_") {
+            dispatch_db(self, name, arguments).await
+        } else if name == "crawl" {
             #[cfg(feature = "surrealdb")]
-            "db_query" => self.call_db_query(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_list" => self.call_db_list(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_status" => self.call_db_status(arguments).await,
-            #[cfg(feature = "embeddings")]
-            "db_vector" => self.call_db_vector(arguments).await,
-            #[cfg(feature = "embeddings")]
-            "db_hybrid" => self.call_db_hybrid(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_export" => self.call_db_export(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_import" => self.call_db_import(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "crawl" => self.call_crawl(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_reset" => self.call_db_reset(arguments).await,
-            #[cfg(feature = "surrealdb")]
-            "db_reset_all" => self.call_db_reset_all(arguments).await,
-            _ => Err(CallToolError::unknown_tool(params.name)),
+            return self.call_crawl(arguments).await;
+            #[cfg(not(feature = "surrealdb"))]
+            return Err(CallToolError::unknown_tool(params.name));
+        } else {
+            Err(CallToolError::unknown_tool(params.name))
         }
     }
+}
+
+async fn dispatch_browser(
+    name: &str,
+    arguments: serde_json::Map<String, serde_json::Value>,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    match name {
+        "browser_navigate" => call_navigate(arguments).await,
+        "browser_snapshot" => call_snapshot(arguments).await,
+        "browser_extract" => call_extract(arguments).await,
+        _ => Err(CallToolError::unknown_tool(name.to_string())),
+    }
+}
+
+#[cfg(feature = "surrealdb")]
+async fn dispatch_db(
+    handler: &VibeEyeMcpHandler,
+    name: &str,
+    arguments: serde_json::Map<String, serde_json::Value>,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    match name {
+        "db_query" => handler.call_db_query(arguments).await,
+        "db_list" => handler.call_db_list(arguments).await,
+        "db_status" => handler.call_db_status(arguments).await,
+        #[cfg(feature = "embeddings")]
+        "db_vector" => handler.call_db_vector(arguments).await,
+        #[cfg(feature = "embeddings")]
+        "db_hybrid" => handler.call_db_hybrid(arguments).await,
+        "db_export" => handler.call_db_export(arguments).await,
+        "db_import" => handler.call_db_import(arguments).await,
+        "db_reset" => handler.call_db_reset(arguments).await,
+        "db_reset_all" => handler.call_db_reset_all(arguments).await,
+        _ => Err(CallToolError::unknown_tool(name.to_string())),
+    }
+}
+
+#[cfg(not(feature = "surrealdb"))]
+async fn dispatch_db(
+    _handler: &VibeEyeMcpHandler,
+    name: &str,
+    _arguments: serde_json::Map<String, serde_json::Value>,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    Err(CallToolError::unknown_tool(name.to_string()))
 }
 
 // ── Browser tools ──────────────────────────────────────────────────────────
