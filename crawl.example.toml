@@ -1,0 +1,107 @@
+# VibeEye crawl configuration — copy to ~/.config/vibe-eye/crawl.toml
+#
+# Merge order: [global] → [domain."example.com"] → [subdomain."docs.example.com"]
+# More-specific sections override less-specific ones.  Every field is optional;
+# unset fields fall back to the defaults shown below.
+
+# ── Global defaults (applied to every crawl) ────────────────────────────────
+
+[global]
+
+# ── Crawl behaviour ─────────────────────────────────────────────────────────
+
+# Maximum crawl depth from the seed URL.  (default: 2)
+max_depth = 2
+
+# Maximum pages to crawl (0 = unlimited).  (default: 100)
+max_pages = 100
+
+# Content format: "markdown", "html", or "text".  (default: "markdown")
+format = "markdown"
+
+# Respect robots.txt exclusion rules.  (default: false)
+respect_robots = false
+
+# Requests per second throttle (per host).  (default: 2.0)
+requests_per_second = 2.0
+
+# Concurrent browser sessions.  (default: 4)
+concurrency = 4
+
+# Stay on the same origin as the seed URL.  (default: true)
+same_origin = true
+
+# Page load timeout in seconds.  (default: 15)
+timeout = 15
+
+# Pre-populate the queue from sitemap.xml.  (default: false)
+sitemap = false
+
+# Directory to write crawled pages (unset = stdout).  (default: none)
+# output = "./crawl_output"
+
+# ── SurrealDB ────────────────────────────────────────────────────────────────
+
+# Connection URL.  Supported schemes:
+#   ws://user:pass@host:port     — remote SurrealDB
+#   surrealkv:///path/to/db      — embedded SurrealKV
+#   mem://                        — in-memory (ephemeral)
+# (default: surrealkv://~/.local/share/vibe-eye/db)
+db_url = "surrealkv://~/.local/share/vibe-eye/db"
+
+# Namespace.  (default: "vibeeye")
+surrealdb_ns = "vibeeye"
+
+# Database name.  (default: "crawl")
+surrealdb_db = "crawl"
+
+# Crawl group name (default: derived from domain, e.g. "example_com")
+# group = "my_custom_group"
+
+# ── Embedding provider (optional — only used with --embed flag) ─────────────
+
+[global.embeddings]
+
+# Provider type.  Only "openai-compatible" is supported.  (required)
+provider = "openai-compatible"
+
+# HTTP endpoint for the embeddings API.  (required)
+# Examples:
+#   Ollama:    http://localhost:11434/v1/embeddings
+#   OpenAI:    https://api.openai.com/v1/embeddings
+endpoint = "http://localhost:11434/v1/embeddings"
+
+# Model name.  (required)
+# Examples: nomic-embed-text, text-embedding-3-small, bge-large-en-v1.5
+model = "nomic-embed-text"
+
+# Vector dimension (optional — auto-detected from first API response).
+# Set explicitly if auto-detection causes issues.
+# dimensions = 768
+
+# Max tokens per context window.  (default: 0 = use model default)
+context_window = 8192
+
+# API key (optional).  Supports ${VAR} and $VAR env interpolation.
+# api_key = "${OPENAI_API_KEY}"
+
+# Target chunk size in tokens.  (default: 512)
+chunk_size = 512
+
+# Chunk overlap in tokens.  (default: 50)
+chunk_overlap = 50
+
+# Max concurrent embedding HTTP requests.  (default: 4)
+# Increase if your embedding server has spare capacity.
+embed_concurrency = 4
+
+
+# ── Per-domain overrides ────────────────────────────────────────────────────
+#
+# [domain."example.com"]
+# max_depth = 3
+# respect_robots = true
+#
+# [subdomain."docs.example.com"]
+# max_depth = 5
+# sitemap = true
