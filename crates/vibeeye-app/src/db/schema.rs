@@ -38,8 +38,12 @@ pub async fn ensure_hnsw_index(db: &Surreal<Any>, dimension: usize) -> Result<()
 
     // First creation — just create the index, no need to delete anything.
     if current.is_none() {
+        // Remove any orphaned index first, then create fresh.
+        let _ = db
+            .query("REMOVE INDEX IF EXISTS hnsw_chunk_embedding ON chunk")
+            .await;
         let sql = format!(
-            "DEFINE INDEX IF NOT EXISTS hnsw_chunk_embedding ON chunk FIELDS embedding HNSW DIMENSION {} DIST COSINE TYPE F32 EFC 150 M 12",
+            "DEFINE INDEX hnsw_chunk_embedding ON chunk FIELDS embedding HNSW DIMENSION {} DIST COSINE TYPE F32 EFC 150 M 12",
             dimension
         );
         db.query(&sql).await?;
