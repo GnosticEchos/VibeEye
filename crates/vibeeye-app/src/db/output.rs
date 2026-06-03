@@ -53,17 +53,18 @@ impl SurrealOutput {
         to_ids: &[RecordId],
         anchor_texts: &[Option<String>],
     ) -> Result<()> {
-        for (to_id, anchor_text) in to_ids.iter().zip(anchor_texts.iter()) {
-            let link = LinkRecord {
+        let links: Vec<LinkRecord> = to_ids
+            .iter()
+            .zip(anchor_texts.iter())
+            .map(|(to_id, anchor_text)| LinkRecord {
                 group: self.group.clone(),
                 from_page: from_id.clone(),
                 to_page: to_id.clone(),
                 anchor_text: anchor_text.clone(),
                 discovered_at: Utc::now(),
-            };
-            self.client.insert_discovered(&link).await?;
-        }
-        Ok(())
+            })
+            .collect();
+        self.client.insert_discovered(&links).await
     }
 }
 

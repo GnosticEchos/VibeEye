@@ -116,19 +116,29 @@ impl DbClient {
         Ok(id)
     }
 
-    /// Insert a discovered link (graph edge) between two pages.
+    /// Insert discovered links (graph edges) in a single batched query.
     ///
-    /// Creates the relation `page -> discovered -> page` with group tag.
-    pub async fn insert_discovered(&self, link: &LinkRecord) -> Result<()> {
-        self.query(
-            "RELATE $from->discovered->$to SET `group` = $group, anchor_text = $anchor_text, discovered_at = $discovered_at",
-        )
-        .bind(("from", link.from_page.clone()))
-        .bind(("to", link.to_page.clone()))
-        .bind(("group", link.group.clone()))
-        .bind(("anchor_text", link.anchor_text.clone()))
-        .bind(("discovered_at", link.discovered_at))
-        .await?;
+    /// Creates the relations `page -> discovered -> page` with group tag.
+    pub async fn insert_discovered(&self, links: &[LinkRecord]) -> Result<()> {
+        if links.is_empty() {
+            return Ok(());
+        }
+        let mut statements = Vec::with_capacity(links.len());
+        for (i, _) in links.iter().enumerate() {
+            statements.push(format!(
+                "RELATE $from{i}->discovered->$to{i} SET `group` = $group{i}, anchor_text = $anchor_text{i}, discovered_at = $discovered_at{i}"
+            ));
+        }
+        let sql = statements.join(";");
+        let mut query = self.query(&sql);
+        for (i, link) in links.iter().enumerate() {
+            query = query.bind((format!("from{i}"), link.from_page.clone()));
+            query = query.bind((format!("to{i}"), link.to_page.clone()));
+            query = query.bind((format!("group{i}"), link.group.clone()));
+            query = query.bind((format!("anchor_text{i}"), link.anchor_text.clone()));
+            query = query.bind((format!("discovered_at{i}"), link.discovered_at));
+        }
+        query.await?;
         Ok(())
     }
 
@@ -253,33 +263,34 @@ impl DbClient {
 
 #[cfg(feature = "embeddings")]
 impl DbClient {
-    /// Insert chunks for a page.
+    /// Insert chunks for a page in a single batched query.
     pub async fn insert_chunks(&self, chunks: &[crate::db::models::ChunkRecord]) -> Result<()> {
-        for chunk in chunks {
-            self.query(
-                "INSERT INTO chunk {
-                    group: $group,
-                    page: $page,
-                    chunk_index: $chunk_index,
-                    chunk_text: $chunk_text,
-                    heading_path: $heading_path,
-                    embedding: $embedding,
-                    model: $model,
-                    dimensions: $dimensions,
-                    created_at: $created_at
-                }",
-            )
-            .bind(("group", chunk.group.clone()))
-            .bind(("page", chunk.page.clone()))
-            .bind(("chunk_index", chunk.chunk_index))
-            .bind(("chunk_text", chunk.chunk_text.clone()))
-            .bind(("heading_path", chunk.heading_path.clone()))
-            .bind(("embedding", chunk.embedding.clone()))
-            .bind(("model", chunk.model.clone()))
-            .bind(("dimensions", chunk.dimensions))
-            .bind(("created_at", chunk.created_at))
-            .await?;
+        if chunks.is_empty() {
+            return Ok(());
         }
+        let mut parts = Vec::with_capacity(chunks.len());
+        for (i, _) in chunks.iter().enumerate() {
+            parts.push(format!(
+                "{{ group: $group{i}, page: $page{i}, chunk_index: $chunk_index{i}, \
+                 chunk_text: $chunk_text{i}, heading_path: $heading_path{i}, \
+                 embedding: $embedding{i}, model: $model{i}, \
+                 dimensions: $dimensions{i}, created_at: $created_at{i} }}"
+            ));
+        }
+        let sql = format!("INSERT INTO chunk [{}]", parts.join(", "));
+        let mut query = self.query(&sql);
+        for (i, chunk) in chunks.iter().enumerate() {
+            query = query.bind((format!("group{i}"), chunk.group.clone()));
+            query = query.bind((format!("page{i}"), chunk.page.clone()));
+            query = query.bind((format!("chunk_index{i}"), chunk.chunk_index));
+            query = query.bind((format!("chunk_text{i}"), chunk.chunk_text.clone()));
+            query = query.bind((format!("heading_path{i}"), chunk.heading_path.clone()));
+            query = query.bind((format!("embedding{i}"), chunk.embedding.clone()));
+            query = query.bind((format!("model{i}"), chunk.model.clone()));
+            query = query.bind((format!("dimensions{i}"), chunk.dimensions));
+            query = query.bind((format!("created_at{i}"), chunk.created_at));
+        }
+        query.await?;
         Ok(())
     }
 
@@ -629,7 +640,7 @@ mod tests {
             anchor_text: Some("read more".to_string()),
             discovered_at: Utc::now(),
         };
-        db.insert_discovered(&link).await?;
+        db.insert_discovered(&[link]).await?;
 
         // Cross-group page
         let page3 = PageRecord {
