@@ -102,12 +102,12 @@ impl SurrealOutput {
         page_ids: &HashMap<String, RecordId>,
         config: &crate::config::embeddings::EmbeddingConfig,
     ) -> anyhow::Result<()> {
-        let provider = crate::embed::EmbeddingProvider::new(config)?;
-        let chunker = crate::chunk::Chunker::new(
+        let provider = std::sync::Arc::new(crate::embed::EmbeddingProvider::new(config)?);
+        let chunker = std::sync::Arc::new(crate::chunk::Chunker::new(
             config.target_chunk_size(),
             config.chunk_overlap(),
             crate::chunk::Tokenizer::CharHeuristic,
-        );
+        ));
 
         let eligible: Vec<_> = results
             .iter()
@@ -120,121 +120,128 @@ impl SurrealOutput {
             return Ok(());
         }
 
+        let embed_concurrency = config.embed_concurrency();
+        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(embed_concurrency));
+        let monitor = std::sync::Arc::new(EmbedMonitor::new(embed_concurrency));
+        let detected_dimension = std::sync::Arc::new(tokio::sync::Mutex::new(None::<usize>));
+        let total_inserted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
         let progress = crate::progress::ProgressReporter::new(eligible.len() as u64, "Embedding");
-        let mut detected_dimension: Option<usize> = None;
-        let mut total_inserted = 0usize;
+        let progress = std::sync::Arc::new(std::sync::Mutex::new(progress));
+
+        let mut tasks = tokio::task::JoinSet::new();
 
         for result in eligible {
             let page_id = page_ids.get(&result.url).unwrap().clone();
-            let count = self
-                .process_page(
-                    result,
+            let result = result.clone();
+            let client = self.client.clone();
+            let group = self.group.clone();
+            let config = config.clone();
+            let provider = provider.clone();
+            let chunker = chunker.clone();
+            let semaphore = semaphore.clone();
+            let monitor = monitor.clone();
+            let detected_dimension = detected_dimension.clone();
+            let total_inserted = total_inserted.clone();
+            let progress = progress.clone();
+
+            tasks.spawn(async move {
+                let _permit = semaphore.acquire().await;
+                let count = Self::process_page_owned(
+                    &client,
+                    &group,
+                    &result,
                     &page_id,
                     &chunker,
                     &provider,
-                    &mut detected_dimension,
-                    config,
+                    &detected_dimension,
+                    &config,
+                    &monitor,
                 )
                 .await;
-            total_inserted += count;
-            progress.inc(1);
+                total_inserted.fetch_add(count, std::sync::atomic::Ordering::Relaxed);
+                progress.lock().unwrap().inc(1);
+                count
+            });
         }
 
-        progress.finish();
-        println!("Chunks inserted: {}", total_inserted);
+        let mut last_report = std::time::Instant::now();
+        while let Some(task_result) = tasks.join_next().await {
+            if let Err(e) = task_result {
+                tracing::warn!(error = %e, "embedding task panicked");
+            }
+            if last_report.elapsed().as_secs() >= 30 {
+                monitor.report();
+                last_report = std::time::Instant::now();
+            }
+        }
+
+        progress.lock().unwrap().finish();
+        monitor.report();
+        println!(
+            "Chunks inserted: {}",
+            total_inserted.load(std::sync::atomic::Ordering::Relaxed)
+        );
         Ok(())
     }
 
-    async fn process_page(
-        &self,
+    async fn process_page_owned(
+        client: &DbClient,
+        group: &str,
         result: &CrawlResult,
         page_id: &RecordId,
         chunker: &crate::chunk::Chunker,
         provider: &crate::embed::EmbeddingProvider,
-        detected_dimension: &mut Option<usize>,
+        detected_dimension: &tokio::sync::Mutex<Option<usize>>,
         config: &crate::config::embeddings::EmbeddingConfig,
+        monitor: &EmbedMonitor,
     ) -> usize {
-        let _ = self.client.delete_chunks_for_page(page_id).await;
+        let _ = client.delete_chunks_for_page(page_id).await;
 
-        let (chunks, embeddings, dim) = match self
-            .embed_page_chunks(result, chunker, provider, detected_dimension)
-            .await
-        {
-            Some(v) => v,
-            None => return 0,
-        };
-
-        let records = self.build_chunk_records(page_id, chunks, embeddings, dim, config);
-        self.insert_records(&result.url, records).await
-    }
-
-    async fn embed_page_chunks(
-        &self,
-        result: &CrawlResult,
-        chunker: &crate::chunk::Chunker,
-        provider: &crate::embed::EmbeddingProvider,
-        detected_dimension: &mut Option<usize>,
-    ) -> Option<(Vec<crate::chunk::Chunk>, Vec<Vec<f32>>, i32)> {
         let chunks = chunker.chunk(&result.content);
         if chunks.is_empty() {
-            return None;
+            return 0;
         }
 
         let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
-        let embeddings = provider.embed_batch(&texts).await.ok()?;
 
-        let dim = self
-            .ensure_dimension(&embeddings, detected_dimension)
-            .await?;
-        Some((chunks, embeddings, dim))
-    }
-
-    async fn ensure_dimension(
-        &self,
-        embeddings: &[Vec<f32>],
-        detected_dimension: &mut Option<usize>,
-    ) -> Option<i32> {
-        if detected_dimension.is_none() {
-            let dim = embeddings.first()?.len();
-            *detected_dimension = Some(dim);
-            self.client.ensure_embeddings_index(dim).await.ok()?;
-            tracing::info!(
-                dimension = dim,
-                "auto-detected embedding dimension from server"
-            );
-        }
-        Some(detected_dimension.unwrap_or(0) as i32)
-    }
-
-    async fn insert_records(
-        &self,
-        url: &str,
-        records: Vec<crate::db::models::ChunkRecord>,
-    ) -> usize {
-        let count = records.len();
-        match self.client.insert_chunks(&records).await {
-            Ok(()) => count,
-            Err(e) => {
-                eprintln!("WARN: failed to insert chunks for {}: {}", url, e);
-                0
+        let t0 = std::time::Instant::now();
+        let embeddings = match provider.embed_batch(&texts).await {
+            Ok(e) => {
+                monitor.record_success(t0.elapsed());
+                e
             }
-        }
-    }
+            Err(e) => {
+                monitor.record_error();
+                tracing::warn!(url = %result.url, error = %e, "embedding request failed");
+                return 0;
+            }
+        };
 
-    fn build_chunk_records(
-        &self,
-        page_id: &RecordId,
-        chunks: Vec<crate::chunk::Chunk>,
-        embeddings: Vec<Vec<f32>>,
-        dim: i32,
-        config: &crate::config::embeddings::EmbeddingConfig,
-    ) -> Vec<crate::db::models::ChunkRecord> {
-        chunks
+        let dim = {
+            let mut dim_guard = detected_dimension.lock().await;
+            if dim_guard.is_none() {
+                if let Some(first) = embeddings.first() {
+                    let d = first.len();
+                    *dim_guard = Some(d);
+                    drop(dim_guard);
+                    let _ = client.ensure_embeddings_index(d).await;
+                    tracing::info!(dimension = d, "auto-detected embedding dimension");
+                    d as i32
+                } else {
+                    0
+                }
+            } else {
+                dim_guard.unwrap_or(0) as i32
+            }
+        };
+
+        let records: Vec<crate::db::models::ChunkRecord> = chunks
             .into_iter()
             .zip(embeddings)
             .enumerate()
             .map(|(idx, (chunk, embedding))| crate::db::models::ChunkRecord {
-                group: self.group.clone(),
+                group: group.to_string(),
                 page: page_id.clone(),
                 chunk_index: idx as i32,
                 chunk_text: chunk.text,
@@ -244,6 +251,95 @@ impl SurrealOutput {
                 dimensions: dim,
                 created_at: chrono::Utc::now(),
             })
-            .collect()
+            .collect();
+
+        let count = records.len();
+        match client.insert_chunks(&records).await {
+            Ok(()) => count,
+            Err(e) => {
+                eprintln!("WARN: failed to insert chunks for {}: {}", result.url, e);
+                0
+            }
+        }
+    }
+}
+
+#[cfg(feature = "embeddings")]
+struct EmbedMonitor {
+    concurrency: usize,
+    successes: std::sync::atomic::AtomicU64,
+    errors: std::sync::atomic::AtomicU64,
+    total_latency_ms: std::sync::atomic::AtomicU64,
+    max_latency_ms: std::sync::atomic::AtomicU64,
+}
+
+#[cfg(feature = "embeddings")]
+impl EmbedMonitor {
+    fn new(concurrency: usize) -> Self {
+        Self {
+            concurrency,
+            successes: std::sync::atomic::AtomicU64::new(0),
+            errors: std::sync::atomic::AtomicU64::new(0),
+            total_latency_ms: std::sync::atomic::AtomicU64::new(0),
+            max_latency_ms: std::sync::atomic::AtomicU64::new(0),
+        }
+    }
+
+    fn record_success(&self, elapsed: std::time::Duration) {
+        let ms = elapsed.as_millis() as u64;
+        self.successes
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.total_latency_ms
+            .fetch_add(ms, std::sync::atomic::Ordering::Relaxed);
+        let mut current = self.max_latency_ms.load(std::sync::atomic::Ordering::Relaxed);
+        while ms > current {
+            match self.max_latency_ms.compare_exchange_weak(
+                current,
+                ms,
+                std::sync::atomic::Ordering::Relaxed,
+                std::sync::atomic::Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(v) => current = v,
+            }
+        }
+    }
+
+    fn record_error(&self) {
+        self.errors
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn report(&self) {
+        let successes = self.successes.load(std::sync::atomic::Ordering::Relaxed);
+        let errors = self.errors.load(std::sync::atomic::Ordering::Relaxed);
+        let total = successes + errors;
+        if total == 0 {
+            return;
+        }
+        let avg_ms = self.total_latency_ms.load(std::sync::atomic::Ordering::Relaxed) / successes.max(1);
+        let max_ms = self.max_latency_ms.load(std::sync::atomic::Ordering::Relaxed);
+        let error_rate = (errors as f64 / total as f64) * 100.0;
+
+        let health = if error_rate > 10.0 {
+            "⚠️  HIGH ERRORS"
+        } else if avg_ms > 5000 {
+            "⚠️  SLOW"
+        } else if avg_ms > 2000 {
+            "⚡ MODERATE"
+        } else {
+            "✅ HEALTHY"
+        };
+
+        tracing::info!(
+            health = health,
+            concurrency = self.concurrency,
+            requests = total,
+            errors = errors,
+            error_rate_pct = format!("{:.1}", error_rate),
+            avg_latency_ms = avg_ms,
+            max_latency_ms = max_ms,
+            "embedding server status"
+        );
     }
 }

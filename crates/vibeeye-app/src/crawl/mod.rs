@@ -77,11 +77,16 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let semaphore = Arc::new(Semaphore::new(opts.concurrency.max(1)));
     let mut host_last_request: HashMap<String, Instant> = HashMap::new();
     let mut results: Vec<CrawlResult> = Vec::new();
+    let mut total_crawled = 0usize;
+    let mut total_successful = 0usize;
+    let mut total_errors = 0usize;
 
     let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
 
+    const EMIT_BATCH_SIZE: usize = 50;
+
     while let Some((url, depth)) = queue.pop_front() {
-        if opts.max_pages > 0 && results.len() >= opts.max_pages {
+        if opts.max_pages > 0 && total_crawled >= opts.max_pages {
             info!(
                 "reached max_pages limit ({}) — stopping crawl",
                 opts.max_pages
@@ -106,24 +111,37 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
         )
         .await;
         drop(permit);
+        total_crawled += 1;
+        if result.error.is_some() {
+            total_errors += 1;
+        } else {
+            total_successful += 1;
+        }
         results.push(result);
         info!(
             url = %url,
             depth = depth,
             queue_size = queue.len(),
-            completed = results.len(),
+            completed = total_crawled,
             "crawled page"
         );
+
+        if results.len() >= EMIT_BATCH_SIZE {
+            let batch: Vec<_> = results.drain(..).collect();
+            emit_results(&batch, &opts).await?;
+        }
     }
 
-    emit_results(&results, &opts).await?;
+    if !results.is_empty() {
+        emit_results(&results, &opts).await?;
+    }
 
     let _ = session.close().await;
 
     info!(
-        total = results.len(),
-        successful = results.iter().filter(|r| r.error.is_none()).count(),
-        errors = results.iter().filter(|r| r.error.is_some()).count(),
+        total = total_crawled,
+        successful = total_successful,
+        errors = total_errors,
         "crawl complete"
     );
 

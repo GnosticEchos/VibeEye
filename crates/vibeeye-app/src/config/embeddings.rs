@@ -23,6 +23,8 @@ pub struct EmbeddingConfig {
     pub chunk_size: Option<usize>,
     /// Chunk overlap in tokens (default: 50).
     pub chunk_overlap: Option<usize>,
+    /// Max concurrent embedding requests (default: 4).
+    pub embed_concurrency: Option<usize>,
 }
 
 impl EmbeddingConfig {
@@ -39,6 +41,11 @@ impl EmbeddingConfig {
     /// Chunk overlap with default.
     pub fn chunk_overlap(&self) -> usize {
         self.chunk_overlap.unwrap_or(50)
+    }
+
+    /// Embedding concurrency with default.
+    pub fn embed_concurrency(&self) -> usize {
+        self.embed_concurrency.unwrap_or(4).max(1)
     }
 }
 
