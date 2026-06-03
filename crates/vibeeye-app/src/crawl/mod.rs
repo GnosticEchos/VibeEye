@@ -234,11 +234,7 @@ async fn fetch_with_session(
     }
 }
 
-async fn do_fetch(
-    url: &str,
-    session: &mut BrowserSession,
-    settle_ms: u64,
-) -> Result<PageCapture> {
+async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Result<PageCapture> {
     session
         .navigate(url)
         .await

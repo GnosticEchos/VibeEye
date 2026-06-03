@@ -85,11 +85,7 @@ impl DbClient {
     }
 
     /// Update an existing page record.
-    async fn update_page(
-        &self,
-        id: surrealdb::types::RecordId,
-        record: &PageRecord,
-    ) -> Result<()> {
+    async fn update_page(&self, id: surrealdb::types::RecordId, record: &PageRecord) -> Result<()> {
         self.query(
             "UPDATE $id SET `group` = $group, url = $url, title = $title,
              content = $content, depth = $depth, format = $format,
