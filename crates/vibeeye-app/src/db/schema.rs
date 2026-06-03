@@ -36,21 +36,31 @@ pub async fn ensure_hnsw_index(db: &Surreal<Any>, dimension: usize) -> Result<()
         return Ok(());
     }
 
+    // First creation — just create the index, no need to delete anything.
+    if current.is_none() {
+        let sql = format!(
+            "DEFINE INDEX IF NOT EXISTS hnsw_chunk_embedding ON chunk FIELDS embedding HNSW DIMENSION {} DIST COSINE TYPE F32 EFC 150 M 12",
+            dimension
+        );
+        db.query(&sql).await?;
+        set_metadata(db, "hnsw_dimension", &dimension.to_string()).await?;
+        tracing::info!(dimension = dimension, "created HNSW index");
+        return Ok(());
+    }
+
+    // Dimension changed — drop old index and clear incompatible chunks.
     tracing::info!(
         old = ?current,
         new = dimension,
-        "recreating HNSW index for new embedding dimension"
+        "recreating HNSW index for changed embedding dimension"
     );
 
-    // Remove old index if it exists
     let _ = db
         .query("REMOVE INDEX IF EXISTS hnsw_chunk_embedding ON chunk")
         .await;
 
-    // Clear old chunks with different dimension
     db.query("DELETE chunk").await?;
 
-    // Create new HNSW index
     let sql = format!(
         "DEFINE INDEX hnsw_chunk_embedding ON chunk FIELDS embedding HNSW DIMENSION {} DIST COSINE TYPE F32 EFC 150 M 12",
         dimension

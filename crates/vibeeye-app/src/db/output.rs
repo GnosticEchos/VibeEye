@@ -120,10 +120,34 @@ impl SurrealOutput {
             return Ok(());
         }
 
+        // Probe dimension with first page before spawning parallel tasks.
+        // This ensures the HNSW index exists before any chunks are inserted,
+        // preventing a race where ensure_embeddings_index deletes chunks.
+        let known_dim = {
+            let first = &eligible[0];
+            let chunks = chunker.chunk(&first.content);
+            if !chunks.is_empty() {
+                let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
+                if let Ok(embeddings) = provider.embed_batch(&texts).await {
+                    if let Some(first_emb) = embeddings.first() {
+                        let d = first_emb.len();
+                        self.client.ensure_embeddings_index(d).await?;
+                        Some(d)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        };
+
         let embed_concurrency = config.embed_concurrency();
         let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(embed_concurrency));
         let monitor = std::sync::Arc::new(EmbedMonitor::new(embed_concurrency));
-        let detected_dimension = std::sync::Arc::new(tokio::sync::Mutex::new(None::<usize>));
+        let detected_dimension = std::sync::Arc::new(tokio::sync::Mutex::new(known_dim));
         let total_inserted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
         let progress = crate::progress::ProgressReporter::new(eligible.len() as u64, "Embedding");
