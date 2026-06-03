@@ -221,60 +221,10 @@ async fn fetch_with_session(
     session: &mut BrowserSession,
     opts: &CrawlOptions,
 ) -> Result<PageCapture> {
-    let result = tokio::time::timeout(Duration::from_secs(opts.timeout_secs), async {
-        session
-            .navigate(url)
-            .await
-            .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
-
-        let mut html = session
-            .get_html()
-            .await
-            .map_err(|e| crate::AppError::Browser(e.to_string()))?;
-
-        // Auto-detect SPAs: if initial HTML contains script tags,
-        // scroll-settle to trigger lazy-loading and re-capture.
-        if html.to_lowercase().contains("<script") {
-            debug!(%url, "SPA detected, running settle loop");
-            let max_iterations = 3;
-            let sleep_per_iteration = Duration::from_millis(opts.settle_ms.max(1) / max_iterations);
-
-            for i in 0..max_iterations {
-                let before = session
-                    .eval_js("document.body ? document.body.scrollHeight : 0")
-                    .await
-                    .unwrap_or_else(|_| "0".to_string());
-                session
-                    .eval_js("window.scrollTo(0, document.body.scrollHeight)")
-                    .await
-                    .ok();
-                tokio::time::sleep(sleep_per_iteration).await;
-                let after = session
-                    .eval_js("document.body ? document.body.scrollHeight : 0")
-                    .await
-                    .unwrap_or_else(|_| "0".to_string());
-
-                if before == after {
-                    trace!(iteration = i, "DOM stable after settle");
-                    break;
-                }
-            }
-
-            // Re-capture HTML after settling
-            html = session
-                .get_html()
-                .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))?;
-        }
-
-        let title = crate::extraction::extract_title(&html);
-        let current_url = session.current_url().unwrap_or(url).to_string();
-        Ok(PageCapture {
-            url: current_url,
-            html,
-            title,
-        })
-    })
+    let result = tokio::time::timeout(
+        Duration::from_secs(opts.timeout_secs),
+        do_fetch(url, session, opts.settle_ms),
+    )
     .await;
 
     match result {
@@ -282,6 +232,66 @@ async fn fetch_with_session(
         Ok(Err(e)) => Err(e),
         Err(_) => Err(crate::AppError::Navigation("timeout".into())),
     }
+}
+
+async fn do_fetch(
+    url: &str,
+    session: &mut BrowserSession,
+    settle_ms: u64,
+) -> Result<PageCapture> {
+    session
+        .navigate(url)
+        .await
+        .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
+
+    let mut html = session
+        .get_html()
+        .await
+        .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+
+    if html.to_lowercase().contains("<script") {
+        html = settle_and_recapture(session, settle_ms).await?;
+    }
+
+    let title = crate::extraction::extract_title(&html);
+    let current_url = session.current_url().unwrap_or(url).to_string();
+    Ok(PageCapture {
+        url: current_url,
+        html,
+        title,
+    })
+}
+
+async fn settle_and_recapture(session: &mut BrowserSession, settle_ms: u64) -> Result<String> {
+    debug!("SPA detected, running settle loop");
+    let max_iterations = 3;
+    let sleep_per_iteration = Duration::from_millis(settle_ms.max(1) / max_iterations);
+
+    for i in 0..max_iterations {
+        let before = session
+            .eval_js("document.body ? document.body.scrollHeight : 0")
+            .await
+            .unwrap_or_else(|_| "0".to_string());
+        session
+            .eval_js("window.scrollTo(0, document.body.scrollHeight)")
+            .await
+            .ok();
+        tokio::time::sleep(sleep_per_iteration).await;
+        let after = session
+            .eval_js("document.body ? document.body.scrollHeight : 0")
+            .await
+            .unwrap_or_else(|_| "0".to_string());
+
+        if before == after {
+            trace!(iteration = i, "DOM stable after settle");
+            break;
+        }
+    }
+
+    session
+        .get_html()
+        .await
+        .map_err(|e| crate::AppError::Browser(e.to_string()))
 }
 
 fn error_result(
