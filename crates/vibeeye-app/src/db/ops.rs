@@ -73,15 +73,14 @@ impl DbClient {
             .bind(("url", url.to_string()))
             .bind(("group", group.to_string()))
             .await?;
-        let existing: Vec<serde_json::Value> = result.take(0)?;
-        let Some(id_val) = existing.into_iter().next() else {
-            return Ok(None);
-        };
-        let id_str = id_val["id"]
-            .as_str()
-            .map(|s| s.to_string())
-            .ok_or_else(|| anyhow::anyhow!("invalid id after select"))?;
-        Ok(Some(surrealdb::types::RecordId::parse_simple(&id_str)?))
+        let raw: Vec<serde_json::Value> = result.take(0)?;
+        Ok(raw
+            .into_iter()
+            .next()
+            .and_then(|v| {
+                let id_str = v["id"].as_str()?;
+                surrealdb::types::RecordId::parse_simple(id_str).ok()
+            }))
     }
 
     /// Update an existing page record.
@@ -122,13 +121,14 @@ impl DbClient {
             .bind(("meta", record.meta.clone()))
             .await?;
         let raw: Vec<serde_json::Value> = result.take(0)?;
-        let id_str = raw
-            .into_iter()
+        raw.into_iter()
             .next()
-            .and_then(|v| v["id"].as_str().map(|s| s.to_string()))
-            .ok_or_else(|| anyhow::anyhow!("page not found after create"))?;
-        let id = surrealdb::types::RecordId::parse_simple(&id_str)?;
-        Ok(id)
+            .and_then(|v| {
+                let id_str = v["id"].as_str()?;
+                let id = surrealdb::types::RecordId::parse_simple(id_str).ok()?;
+                Some(id)
+            })
+            .ok_or_else(|| anyhow::anyhow!("page not found after create"))
     }
 
     /// Insert discovered links (graph edges) in a single batched query.
@@ -193,13 +193,15 @@ impl DbClient {
         };
         let results: Vec<QueryResult> = raw
             .into_iter()
-            .filter_map(|mut v| {
-                if let Some(content) = v.get("content").and_then(|c| c.as_str()) {
-                    let snippet = extract_match_snippet(content, query, 300);
-                    v["snippet"] = serde_json::Value::String(snippet);
-                    v.as_object_mut()?.remove("content");
-                }
-                serde_json::from_value(v).ok()
+            .filter_map(|v| {
+                let content = v.get("content")?.as_str()?;
+                let snippet = extract_match_snippet(content, query, 300);
+                Some(QueryResult {
+                    url: v.get("url")?.as_str()?.to_string(),
+                    title: v.get("title")?.as_str()?.to_string(),
+                    snippet,
+                    score: v.get("score")?.as_f64(),
+                })
             })
             .collect();
         Ok(results)
