@@ -84,6 +84,8 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
 
     const EMIT_BATCH_SIZE: usize = 50;
+    let emit_semaphore = Arc::new(Semaphore::new(2));
+    let mut emit_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
     while let Some((url, depth)) = queue.pop_front() {
         if opts.max_pages > 0 && total_crawled >= opts.max_pages {
@@ -128,12 +130,28 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
 
         if results.len() >= EMIT_BATCH_SIZE {
             let batch = std::mem::take(&mut results);
-            emit_results(&batch, &opts).await?;
+            let opts = opts.clone();
+            let sem = emit_semaphore.clone();
+            let handle = tokio::spawn(async move {
+                let _permit = sem.acquire().await;
+                if let Err(e) = emit_results(&batch, &opts).await {
+                    tracing::error!(error = %e, "background emit failed");
+                }
+            });
+            emit_handles.push(handle);
         }
     }
 
+    // Final batch
     if !results.is_empty() {
         emit_results(&results, &opts).await?;
+    }
+
+    // Wait for all background emit tasks to finish
+    for handle in emit_handles {
+        if let Err(e) = handle.await {
+            tracing::error!(error = %e, "emit task panicked");
+        }
     }
 
     let _ = session.close().await;

@@ -271,7 +271,10 @@ impl SurrealOutput {
         match ctx.client.insert_chunks(&records).await {
             Ok(()) => count,
             Err(e) => {
-                eprintln!("WARN: failed to insert chunks for {}: {}", ctx.result.url, e);
+                eprintln!(
+                    "WARN: failed to insert chunks for {}: {}",
+                    ctx.result.url, e
+                );
                 0
             }
         }
