@@ -198,43 +198,79 @@ pub enum CrawlStatus {
 
 ## 7. Implementation Checklist
 
-### Phase 1: Engine Commands
-1. [ ] Add EvalJs to EngineCommand
-2. [ ] Add GetDomLinks to EngineCommand
-3. [ ] Implement eval_js_cmd handler
-4. [ ] Implement get_dom_links_cmd handler
+### Phase 1: Engine Commands ✅
+1. [x] Add EvalJs to EngineCommand
+2. [x] Add GetDomLinks to EngineCommand
+3. [x] Implement eval_js_cmd handler
+4. [x] Implement get_dom_links_cmd handler
 
-### Phase 2: BrowserSession API
-5. [ ] Add eval_js method to BrowserSession
-6. [ ] Add get_dom_links method to BrowserSession
+### Phase 2: BrowserSession API ✅
+5. [x] Add eval_js method to BrowserSession
+6. [x] Add get_dom_links method to BrowserSession
 
-### Phase 3: Crawl Auto-Detection
-7. [ ] Add settle_ms to CrawlOptions
-8. [ ] Detect script tags in initial HTML
-9. [ ] Implement scroll-settle loop
-10. [ ] Compare raw vs DOM link counts
-11. [ ] Use DOM links when appropriate
+### Phase 3: Crawl Auto-Detection ✅
+7. [x] Add settle_ms to CrawlOptions
+8. [x] Detect script tags in initial HTML
+9. [x] Implement scroll-settle loop
+10. [x] Compare raw vs DOM link counts
+11. [x] Use DOM links when appropriate
 
-### Phase 4: Structured Metadata
-12. [ ] Add meta field to CrawlResult
+### Phase 4: Structured Metadata (partial)
+12. [x] Add meta field to CrawlResult
 13. [ ] Implement JSON-LD extraction
-14. [ ] Implement Open Graph extraction
+14. [x] Implement Open Graph extraction
 15. [ ] Add IndexedDB dump script
 
-### Phase 5: SurrealDB Schema
-16. [ ] Update page table schema with meta field
-17. [ ] Add update_page_meta to DbClient
+### Phase 5: SurrealDB Schema ✅
+16. [x] Update page table schema with meta field
+17. [x] Add update_page_meta to DbClient
 
 ### Phase 6: MCP Tool Contract
 18. [ ] Update crawl tool description
 19. [ ] Add CrawlStatus enum to results
 
-### Phase 7: DevTools Integration
-20. [ ] Add VIBEYE_DEVTOOLS env var check
-21. [ ] Configure DevTools on random port
+### Phase 7: DevTools Integration ✅
+20. [x] Add VIBEYE_DEVTOOLS env var check
+21. [x] Configure DevTools on random port
+22. [x] Add --devtools CLI flag
 
 ### Phase 8: Testing
-22. [ ] Test crates.io crawl
-23. [ ] Test GitHub repo crawl
-24. [ ] Verify book.servo.org no regression
-25. [ ] Verify hybrid search still works
+23. [ ] Test crates.io crawl
+24. [ ] Test GitHub repo crawl
+25. [ ] Verify book.servo.org no regression
+26. [ ] Verify hybrid search still works
+
+---
+
+## 8. Remaining Work (Building-Block Order)
+
+Each phase builds on the previous:
+
+### 8.1 JSON-LD Extraction (Phase 4)
+Extract JSON-LD structured data from `<script type="application/ld+json">` tags
+and store in `CrawlResult.meta`. Complements existing Open Graph extraction.
+- File: `crates/vibeeye-app/src/extraction/dom.rs`
+- Depends on: nothing new (meta field already exists)
+
+### 8.2 IndexedDB Dump (Phase 4)
+After page settles, enumerate IndexedDB databases via `eval_js`, dump stores
+as JSON, and attach to `CrawlResult.meta.idb_data`. Enables archiving
+client-side state from SPAs.
+- Files: `crates/vibeeye-app/src/crawl/mod.rs` (post-settle hook),
+  `crates/vibeeye-app/src/extraction/` (new IDB script)
+- Depends on: 8.1 (shares meta field plumbing)
+
+### 8.3 MCP Tool Contract (Phase 6)
+Add `CrawlStatus` enum with `Ok`/`NeedsCli`/`Partial` variants to MCP tool
+results. Update crawl tool description to guide agents toward CLI for auth
+or large crawls.
+- Files: `crates/vibeeye-mcp/src/tools.rs`
+- Depends on: 8.2 (full extraction pipeline should be stable first)
+
+### 8.4 End-to-End Testing (Phase 8)
+Test crawls against real-world targets to validate the full pipeline.
+- crates.io (SPA with JS rendering)
+- GitHub repo (mixed static + JS)
+- book.servo.org (regression check)
+- Hybrid search quality validation
+- Depends on: 8.3 (MCP contract affects test surface)
