@@ -217,17 +217,17 @@ pub enum CrawlStatus {
 
 ### Phase 4: Structured Metadata (partial)
 12. [x] Add meta field to CrawlResult
-13. [ ] Implement JSON-LD extraction
-14. [x] Implement Open Graph extraction
+13. [x] Implement JSON-LD extraction (via eval_js on settled DOM)
+14. [x] Implement Open Graph extraction (via eval_js + html-to-markdown-rs)
 15. [ ] Add IndexedDB dump script
 
 ### Phase 5: SurrealDB Schema ✅
 16. [x] Update page table schema with meta field
 17. [x] Add update_page_meta to DbClient
 
-### Phase 6: MCP Tool Contract
-18. [ ] Update crawl tool description
-19. [ ] Add CrawlStatus enum to results
+### Phase 6: MCP Tool Contract ✅
+18. [x] Update crawl tool description (fixed inaccurate --auth reference)
+19. [x] Enrich crawl tool return value with derived group name and query hint
 
 ### Phase 7: DevTools Integration ✅
 20. [x] Add VIBEYE_DEVTOOLS env var check
@@ -242,35 +242,18 @@ pub enum CrawlStatus {
 
 ---
 
-## 8. Remaining Work (Building-Block Order)
+## 8. Remaining Work
 
-Each phase builds on the previous:
-
-### 8.1 JSON-LD Extraction (Phase 4)
-Extract JSON-LD structured data from `<script type="application/ld+json">` tags
-and store in `CrawlResult.meta`. Complements existing Open Graph extraction.
-- File: `crates/vibeeye-app/src/extraction/dom.rs`
-- Depends on: nothing new (meta field already exists)
-
-### 8.2 IndexedDB Dump (Phase 4)
+### 8.1 IndexedDB Dump (Phase 4 — deferred)
 After page settles, enumerate IndexedDB databases via `eval_js`, dump stores
-as JSON, and attach to `CrawlResult.meta.idb_data`. Enables archiving
-client-side state from SPAs.
-- Files: `crates/vibeeye-app/src/crawl/mod.rs` (post-settle hook),
-  `crates/vibeeye-app/src/extraction/` (new IDB script)
-- Depends on: 8.1 (shares meta field plumbing)
+as JSON, and attach to `CrawlResult.meta.idb_data`. **Deferred** because
+`eval_js` is synchronous while IDB operations are Promise-based, requiring
+either async JS evaluation support or complex polling in Servo.
+- Files: `crates/vibeeye-app/src/crawl/mod.rs`, `crates/vibeeye-app/src/extraction/`
 
-### 8.3 MCP Tool Contract (Phase 6)
-Add `CrawlStatus` enum with `Ok`/`NeedsCli`/`Partial` variants to MCP tool
-results. Update crawl tool description to guide agents toward CLI for auth
-or large crawls.
-- Files: `crates/vibeeye-mcp/src/tools.rs`
-- Depends on: 8.2 (full extraction pipeline should be stable first)
-
-### 8.4 End-to-End Testing (Phase 8)
+### 8.2 End-to-End Testing (Phase 8)
 Test crawls against real-world targets to validate the full pipeline.
 - crates.io (SPA with JS rendering)
 - GitHub repo (mixed static + JS)
 - book.servo.org (regression check)
 - Hybrid search quality validation
-- Depends on: 8.3 (MCP contract affects test surface)

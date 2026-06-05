@@ -298,9 +298,14 @@ impl VibeEyeMcpHandler {
             .await
             .map_err(|e| CallToolError::from_message(e.to_string()))?;
 
+        let group = vibeeye_app::db::util::derive_group(&tool.url, tool.group.as_deref());
         tool_result(&serde_json::json!({
-            "status": "crawl completed",
+            "status": "crawl_completed",
             "url": tool.url,
+            "group": group,
+            "max_depth": tool.max_depth,
+            "max_pages": tool.max_pages,
+            "note": format!("Query results with: db_query <query> --group {}", group),
         }))
     }
 

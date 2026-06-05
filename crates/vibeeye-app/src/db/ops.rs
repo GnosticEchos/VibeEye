@@ -74,13 +74,10 @@ impl DbClient {
             .bind(("group", group.to_string()))
             .await?;
         let raw: Vec<serde_json::Value> = result.take(0)?;
-        Ok(raw
-            .into_iter()
-            .next()
-            .and_then(|v| {
-                let id_str = v["id"].as_str()?;
-                surrealdb::types::RecordId::parse_simple(id_str).ok()
-            }))
+        Ok(raw.into_iter().next().and_then(|v| {
+            let id_str = v["id"].as_str()?;
+            surrealdb::types::RecordId::parse_simple(id_str).ok()
+        }))
     }
 
     /// Update an existing page record.
