@@ -102,6 +102,10 @@ pub enum Commands {
         #[cfg(feature = "embeddings")]
         #[arg(long)]
         embed: bool,
+
+        /// Enable DevTools server on a random port for debugging
+        #[arg(long)]
+        devtools: bool,
     },
 
     /// Import crawl data into SurrealDB

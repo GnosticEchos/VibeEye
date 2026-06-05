@@ -54,6 +54,7 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
             surrealdb,
             #[cfg(feature = "embeddings")]
             embed,
+            devtools,
         } => {
             crawl_command(
                 url,
@@ -72,6 +73,7 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
                 surrealdb,
                 #[cfg(feature = "embeddings")]
                 embed,
+                devtools,
             )
             .await
         }
@@ -141,7 +143,12 @@ async fn crawl_command(
     sitemap: Option<bool>,
     #[cfg(feature = "surrealdb")] surrealdb: bool,
     #[cfg(feature = "embeddings")] embed: bool,
+    devtools: bool,
 ) -> Result<()> {
+    if devtools {
+        // SAFETY: called before any threads are spawned (engine starts after this)
+        unsafe { std::env::set_var("VIBEYE_DEVTOOLS", "1") };
+    }
     tracing::debug!(%url, "crawl command");
 
     let (_config, profile) = load_profile(config_path.as_deref(), &url)?;
