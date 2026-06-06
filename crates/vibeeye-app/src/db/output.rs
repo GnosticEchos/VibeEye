@@ -215,9 +215,22 @@ impl SurrealOutput {
     async fn process_page_owned(ctx: &PageEmbedCtx<'_, '_>) -> usize {
         let _ = ctx.client.delete_chunks_for_page(ctx.page_id).await;
 
-        let chunks = ctx.chunker.chunk(&ctx.result.content);
+        let mut chunks = ctx.chunker.chunk(&ctx.result.content);
         if chunks.is_empty() {
             return 0;
+        }
+
+        // Cap chunks per page to avoid overwhelming the embedding server
+        // and SurrealDB on massive pages (e.g., huge rustdoc tables).
+        const MAX_CHUNKS_PER_PAGE: usize = 1000;
+        if chunks.len() > MAX_CHUNKS_PER_PAGE {
+            tracing::warn!(
+                url = %ctx.result.url,
+                chunks = chunks.len(),
+                max = MAX_CHUNKS_PER_PAGE,
+                "truncating chunks for page"
+            );
+            chunks.truncate(MAX_CHUNKS_PER_PAGE);
         }
 
         let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();

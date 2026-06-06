@@ -278,10 +278,14 @@ impl DbClient {
 #[cfg(feature = "embeddings")]
 impl DbClient {
     /// Insert chunks for a page in a single batched query.
+    /// Capped at 500 chunks per call to avoid SurrealDB HNSW index thrashing.
     pub async fn insert_chunks(&self, chunks: &[crate::db::models::ChunkRecord]) -> Result<()> {
         if chunks.is_empty() {
             return Ok(());
         }
+        const MAX_PER_BATCH: usize = 500;
+        let chunks = &chunks[..chunks.len().min(MAX_PER_BATCH)];
+
         let mut parts = Vec::with_capacity(chunks.len());
         for (i, _) in chunks.iter().enumerate() {
             parts.push(format!(
@@ -304,7 +308,9 @@ impl DbClient {
             query = query.bind((format!("dimensions{i}"), chunk.dimensions));
             query = query.bind((format!("created_at{i}"), chunk.created_at));
         }
-        query.await?;
+        tokio::time::timeout(std::time::Duration::from_secs(30), query)
+            .await
+            .map_err(|_| crate::AppError::InvalidInput("chunk insert timed out after 30s".into()))??;
         Ok(())
     }
 
