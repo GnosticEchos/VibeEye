@@ -388,7 +388,13 @@ fn eval_js_cmd(servo: &Servo, active_webview: &Option<WebView>, script: &str) ->
         }));
     });
 
+    let start = std::time::Instant::now();
     while result_slot.lock().unwrap().is_none() {
+        if start.elapsed() > std::time::Duration::from_secs(5) {
+            return Err(AppError::Core(VibeError::Extraction(
+                "JS evaluation timed out (callback never fired — Servo script thread may have panicked)".to_string(),
+            )));
+        }
         servo.spin_event_loop();
         std::thread::yield_now();
     }
