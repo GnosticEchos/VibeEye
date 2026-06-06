@@ -1,16 +1,22 @@
 //! Blocking navigation helpers that run on the Servo engine thread.
 
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use servo::{Servo, WebView};
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 use crate::Result;
 use vibeeye_core::VibeError;
 
 /// Spin the event loop until the webview reports `LoadStatus::Complete`.
 pub fn wait_for_load(servo: &Servo, webview: &WebView) {
+    let start = Instant::now();
     while webview.load_status() != servo::LoadStatus::Complete {
+        if start.elapsed() > Duration::from_secs(15) {
+            warn!("page load timed out after 15s");
+            break;
+        }
         servo.spin_event_loop();
         std::thread::yield_now();
     }
@@ -32,7 +38,13 @@ pub fn extract_html(servo: &Servo, webview: &WebView) -> Result<String> {
         }));
     });
 
+    let start = Instant::now();
     while result_slot.lock().unwrap().is_none() {
+        if start.elapsed() > Duration::from_secs(5) {
+            return Err(crate::AppError::Core(VibeError::Extraction(
+                "extract_html timed out (JS callback never fired)".to_string(),
+            )));
+        }
         servo.spin_event_loop();
         std::thread::yield_now();
     }
@@ -67,7 +79,13 @@ pub fn extract_text(servo: &Servo, webview: &WebView) -> Result<String> {
         },
     );
 
+    let start = Instant::now();
     while result_slot.lock().unwrap().is_none() {
+        if start.elapsed() > Duration::from_secs(5) {
+            return Err(crate::AppError::Core(VibeError::Extraction(
+                "extract_text timed out (JS callback never fired)".to_string(),
+            )));
+        }
         servo.spin_event_loop();
         std::thread::yield_now();
     }
