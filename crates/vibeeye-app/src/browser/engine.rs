@@ -308,6 +308,17 @@ fn navigate_cmd(
 ) -> Result<String> {
     let parsed = Url::parse(url).map_err(|e| VibeError::Navigation(format!("invalid URL: {e}")))?;
 
+    // Drop the old webview before creating a new one so Servo can
+    // reclaim DOM, JS heap, and rendering resources. Without this,
+    // long crawls leak gigabytes of memory and eventually get OOM-killed.
+    if let Some(old) = active_webview.take() {
+        drop(old);
+        for _ in 0..10 {
+            servo.spin_event_loop();
+            std::thread::yield_now();
+        }
+    }
+
     let delegate = Rc::new(HeadlessWebViewDelegate);
 
     let webview = WebViewBuilder::new(servo, rendering_context.clone())
