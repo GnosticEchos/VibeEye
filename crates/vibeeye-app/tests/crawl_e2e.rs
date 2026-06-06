@@ -21,6 +21,7 @@ async fn test_crawl_seed_page_completes() {
     setup_test_env();
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
+        seed_urls: vec![],
         max_depth: 2,
         max_pages: 10,
         format: ContentFormat::Markdown,
@@ -50,6 +51,7 @@ async fn test_crawl_writes_output_directory() {
 
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
+        seed_urls: vec![],
         max_depth: 2,
         max_pages: 10,
         format: ContentFormat::Markdown,
@@ -103,6 +105,7 @@ async fn test_crawl_respects_max_pages() {
 
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
+        seed_urls: vec![],
         max_depth: 2,
         max_pages: 1,
         format: ContentFormat::Html,
@@ -143,6 +146,7 @@ async fn test_crawl_html_format_output() {
 
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
+        seed_urls: vec![],
         max_depth: 2,
         max_pages: 10,
         format: ContentFormat::Html,
@@ -181,6 +185,7 @@ async fn test_crawl_text_format_output() {
 
     let opts = CrawlOptions {
         url: "https://example.com".to_string(),
+        seed_urls: vec![],
         max_depth: 2,
         max_pages: 10,
         format: ContentFormat::Text,

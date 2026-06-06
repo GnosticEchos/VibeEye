@@ -281,6 +281,7 @@ impl VibeEyeMcpHandler {
         let outputs = self.crawl_outputs(&tool).await?;
         let opts = vibeeye_app::crawl::CrawlOptions {
             url: tool.url.clone(),
+            seed_urls: vec![],
             max_depth: tool.max_depth,
             max_pages: tool.max_pages as usize,
             format: vibeeye_core::ContentFormat::Markdown,

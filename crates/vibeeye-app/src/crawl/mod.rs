@@ -32,6 +32,7 @@ const MAX_DISCOVERED_URLS: usize = 5000;
 #[derive(Debug, Clone)]
 pub struct CrawlOptions {
     pub url: String,
+    pub seed_urls: Vec<String>,
     pub max_depth: u32,
     pub max_pages: usize,
     pub format: ContentFormat,
@@ -188,10 +189,19 @@ async fn build_queue(
         }
     }
 
-    let seed = normalize_url(&opts.url);
-    if !visited.contains(&seed) {
-        visited.insert(seed.clone());
-        queue.push_back((seed, 0));
+    // Use curated seed URLs when provided, otherwise fall back to single url
+    let seeds: Vec<String> = if opts.seed_urls.is_empty() {
+        vec![opts.url.clone()]
+    } else {
+        opts.seed_urls.clone()
+    };
+
+    for url in &seeds {
+        let seed = normalize_url(url);
+        if !visited.contains(&seed) {
+            visited.insert(seed.clone());
+            queue.push_back((seed, 0));
+        }
     }
 
     (queue, visited)
@@ -616,6 +626,7 @@ mod tests {
         let robots = robots::RobotsTxt::default();
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -643,6 +654,7 @@ mod tests {
         let robots = robots::RobotsTxt::parse("User-agent: *\nDisallow: /private/\n");
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -681,6 +693,7 @@ mod tests {
         let base_url = Url::parse("https://example.com").unwrap();
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -718,6 +731,7 @@ mod tests {
         let base_url = Url::parse("https://example.com").unwrap();
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -746,6 +760,7 @@ mod tests {
         let base_url = Url::parse("https://example.com").unwrap();
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -778,6 +793,7 @@ mod tests {
         let base_url = Url::parse("https://example.com").unwrap();
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,
@@ -869,6 +885,7 @@ mod tests {
     fn test_build_queue_without_sitemap() {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
+            seed_urls: vec![],
             max_depth: 2,
             max_pages: 10,
             format: ContentFormat::Markdown,

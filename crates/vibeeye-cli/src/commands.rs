@@ -44,6 +44,8 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
             max_pages,
             format,
             output,
+            urls_file,
+            output_urls,
             respect_robots,
             requests_per_second,
             concurrency,
@@ -63,6 +65,8 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
                 max_pages,
                 format,
                 output,
+                urls_file,
+                output_urls,
                 respect_robots,
                 requests_per_second,
                 concurrency,
@@ -135,6 +139,8 @@ async fn crawl_command(
     max_pages: Option<usize>,
     format: Option<String>,
     output: Option<PathBuf>,
+    urls_file: Option<PathBuf>,
+    output_urls: Option<PathBuf>,
     respect_robots: Option<bool>,
     requests_per_second: Option<f64>,
     concurrency: Option<usize>,
@@ -154,11 +160,18 @@ async fn crawl_command(
     let (_config, profile) = load_profile(config_path.as_deref(), &url)?;
     let content_format = resolve_content_format(format.as_deref(), profile.format.as_deref());
 
+    let seed_urls = if let Some(ref path) = urls_file {
+        read_seed_urls(path)?
+    } else {
+        vec![]
+    };
+
     #[cfg(feature = "surrealdb")]
     let surreal_output = setup_surreal_output(surrealdb, &profile, &url).await?;
 
     let opts = build_crawl_options(
         url,
+        seed_urls,
         max_depth,
         max_pages,
         content_format,
@@ -169,6 +182,7 @@ async fn crawl_command(
         timeout,
         sitemap,
         output,
+        output_urls,
         profile,
         #[cfg(feature = "surrealdb")]
         surreal_output,
@@ -194,6 +208,30 @@ fn load_profile(
     Ok((config, profile))
 }
 
+/// Read seed URLs from a file (one per line) or stdin when path is `-`.
+fn read_seed_urls(path: &std::path::Path) -> Result<Vec<String>> {
+    use std::io::BufRead;
+
+    let is_stdin = path.as_os_str() == "-";
+    let reader: Box<dyn std::io::BufRead> = if is_stdin {
+        Box::new(std::io::BufReader::new(std::io::stdin()))
+    } else {
+        let file = std::fs::File::open(path)
+            .map_err(|e| anyhow::anyhow!("failed to open urls-file: {e}"))?;
+        Box::new(std::io::BufReader::new(file))
+    };
+
+    let mut urls = Vec::new();
+    for line in reader.lines() {
+        let line = line.map_err(|e| anyhow::anyhow!("failed to read urls-file: {e}"))?;
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            urls.push(trimmed.to_string());
+        }
+    }
+    Ok(urls)
+}
+
 fn resolve_content_format(format: Option<&str>, profile_format: Option<&str>) -> ContentFormat {
     let format_str = format.or(profile_format).unwrap_or("markdown");
     match format_str {
@@ -206,6 +244,7 @@ fn resolve_content_format(format: Option<&str>, profile_format: Option<&str>) ->
 #[allow(clippy::too_many_arguments)]
 fn build_crawl_options(
     url: String,
+    seed_urls: Vec<String>,
     max_depth: Option<u32>,
     max_pages: Option<usize>,
     content_format: ContentFormat,
@@ -216,6 +255,7 @@ fn build_crawl_options(
     timeout: Option<u64>,
     sitemap: Option<bool>,
     output: Option<PathBuf>,
+    output_urls: Option<PathBuf>,
     profile: vibeeye_app::config::CrawlProfile,
     #[cfg(feature = "surrealdb")] surreal_output: Option<vibeeye_app::db::SurrealOutput>,
     #[cfg(feature = "embeddings")] embed: bool,
@@ -223,6 +263,7 @@ fn build_crawl_options(
     let outputs = build_outputs(
         content_format,
         output,
+        output_urls,
         &profile,
         #[cfg(feature = "surrealdb")]
         surreal_output,
@@ -239,6 +280,7 @@ fn build_crawl_options(
 
     CrawlOptions {
         url,
+        seed_urls,
         max_depth: max_depth.or(profile.max_depth).unwrap_or(2),
         max_pages: effective_max_pages,
         format: content_format,
@@ -258,12 +300,13 @@ fn build_crawl_options(
 fn build_outputs(
     content_format: ContentFormat,
     output: Option<PathBuf>,
+    output_urls: Option<PathBuf>,
     profile: &vibeeye_app::config::CrawlProfile,
     #[cfg(feature = "surrealdb")] surreal_output: Option<vibeeye_app::db::SurrealOutput>,
     #[cfg(feature = "embeddings")] embed: bool,
 ) -> Vec<std::sync::Arc<dyn vibeeye_app::crawl::output::CrawlOutput>> {
     use std::sync::Arc;
-    use vibeeye_app::crawl::output::{CrawlOutput, DirectoryOutput, StdoutOutput};
+    use vibeeye_app::crawl::output::{CrawlOutput, DirectoryOutput, StdoutOutput, UrlListOutput};
 
     let mut outputs: Vec<Arc<dyn CrawlOutput>> = Vec::new();
 
@@ -274,6 +317,10 @@ fn build_outputs(
             surreal.embed_config = profile.embeddings.clone();
         }
         outputs.push(Arc::new(surreal));
+    }
+
+    if let Some(path) = output_urls {
+        outputs.push(Arc::new(UrlListOutput::new(path)));
     }
 
     let dir = output.or_else(|| profile.output.clone().map(PathBuf::from));
@@ -511,9 +558,9 @@ mod tests {
         profile: &CrawlProfile,
     ) -> Vec<std::sync::Arc<dyn vibeeye_app::crawl::output::CrawlOutput>> {
         #[cfg(feature = "surrealdb")]
-        return build_outputs(format, output, profile, None, false);
+        return build_outputs(format, output, None, profile, None, false);
         #[cfg(not(feature = "surrealdb"))]
-        return build_outputs(format, output, profile);
+        return build_outputs(format, output, None, profile);
     }
 
     #[test]

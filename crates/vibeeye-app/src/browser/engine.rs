@@ -328,6 +328,15 @@ fn navigate_cmd(
         std::thread::yield_now();
     }
 
+    // Extra spins after load completes to let the script thread
+    // finish stylesheet / render-blocking bookkeeping before
+    // we run JS that may touch the DOM. Helps avoid upstream
+    // Servo assertion failures in decrement_*_count.
+    for _ in 0..20 {
+        servo.spin_event_loop();
+        std::thread::yield_now();
+    }
+
     *active_webview = Some(webview);
     Ok(url.to_string())
 }

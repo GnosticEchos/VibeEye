@@ -1,11 +1,46 @@
 use crate::Result;
 use crate::crawl::CrawlResult;
 use std::path::PathBuf;
+use tokio::io::AsyncWriteExt;
 
 /// Abstract output sink for crawl results.
 #[async_trait::async_trait]
 pub trait CrawlOutput: Send + Sync + std::fmt::Debug {
     async fn emit_results(&self, results: &[CrawlResult]) -> Result<()>;
+}
+
+/// Append URLs (one per line) to a text file.
+#[derive(Debug, Clone)]
+pub struct UrlListOutput {
+    path: PathBuf,
+}
+
+impl UrlListOutput {
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+}
+
+#[async_trait::async_trait]
+impl CrawlOutput for UrlListOutput {
+    async fn emit_results(&self, results: &[CrawlResult]) -> Result<()> {
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.path)
+            .await
+            .map_err(|e| crate::AppError::InvalidInput(format!("failed to open URL list file: {e}")))?;
+
+        for result in results {
+            if result.error.is_none() {
+                let line = format!("{}\n", result.url);
+                file.write_all(line.as_bytes()).await.map_err(|e| {
+                    crate::AppError::InvalidInput(format!("failed to write URL: {e}"))
+                })?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Print results as JSON Lines to stdout.

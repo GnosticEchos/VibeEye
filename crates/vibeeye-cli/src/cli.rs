@@ -69,6 +69,14 @@ pub enum Commands {
         #[arg(short, long, value_name = "DIR")]
         output: Option<PathBuf>,
 
+        /// File containing seed URLs (one per line, use `-` for stdin)
+        #[arg(long, value_name = "FILE")]
+        urls_file: Option<PathBuf>,
+
+        /// File to append discovered URLs to (one per line)
+        #[arg(long, value_name = "FILE")]
+        output_urls: Option<PathBuf>,
+
         /// Respect robots.txt
         #[arg(long)]
         respect_robots: Option<bool>,
