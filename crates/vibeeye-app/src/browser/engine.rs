@@ -375,37 +375,13 @@ fn eval_js_cmd(servo: &Servo, active_webview: &Option<WebView>, script: &str) ->
         .as_ref()
         .ok_or_else(|| VibeError::Engine("no active webview".to_string()))?;
 
-    let result_slot: Arc<
-        Mutex<Option<std::result::Result<String, servo::JavaScriptEvaluationError>>>,
-    > = Arc::new(Mutex::new(None));
-
-    let slot = result_slot.clone();
-    webview.evaluate_javascript(script, move |result| {
-        let mut guard = slot.lock().unwrap();
-        *guard = Some(result.map(|v| match v {
-            servo::JSValue::String(s) => s,
-            other => format!("{other:?}"),
-        }));
-    });
-
-    let start = std::time::Instant::now();
-    while result_slot.lock().unwrap().is_none() {
-        if start.elapsed() > std::time::Duration::from_secs(5) {
-            return Err(AppError::Core(VibeError::Extraction(
-                "JS evaluation timed out (callback never fired — Servo script thread may have panicked)".to_string(),
-            )));
-        }
-        servo.spin_event_loop();
-        std::thread::yield_now();
-    }
-
-    let guard = result_slot.lock().unwrap();
-    let js_result = guard
-        .as_ref()
-        .expect("result populated by callback")
-        .as_ref()
-        .map_err(|e| VibeError::Extraction(format!("JS eval error: {e:?}")))?
-        .clone();
+    let js_result = crate::browser::navigation::eval_js_with_timeout(
+        servo,
+        webview,
+        script,
+        std::time::Duration::from_secs(5),
+        "eval_js_cmd",
+    )?;
 
     trace!(
         script_len = script.len(),
