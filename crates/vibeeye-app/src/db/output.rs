@@ -73,6 +73,9 @@ impl crate::crawl::output::CrawlOutput for SurrealOutput {
     async fn emit_results(&self, results: &[CrawlResult]) -> crate::Result<()> {
         let mut page_ids: HashMap<String, RecordId> = HashMap::new();
         for result in results {
+            if result.error.is_some() {
+                continue;
+            }
             match self.emit_page(result).await {
                 Ok(id) => {
                     page_ids.insert(result.url.clone(), id);

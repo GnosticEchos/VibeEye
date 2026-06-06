@@ -2,13 +2,16 @@
 
 use crate::browser::BrowserSession;
 use crate::{AppError, Result};
+use std::collections::HashMap;
 
 /// Result of navigating to a page and capturing basic info
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageCapture {
     pub url: String,
     pub html: String,
     pub title: Option<String>,
+    pub http_status: Option<u16>,
+    pub local_storage: Option<HashMap<String, String>>,
 }
 
 /// Navigate to URL and capture page data
@@ -31,5 +34,11 @@ pub async fn navigate_and_capture(url: &str) -> Result<PageCapture> {
 
     session.close().await.ok();
 
-    Ok(PageCapture { url, html, title })
+    Ok(PageCapture {
+        url,
+        html,
+        title,
+        http_status: None,
+        local_storage: None,
+    })
 }

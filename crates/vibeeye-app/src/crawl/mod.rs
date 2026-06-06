@@ -21,6 +21,7 @@ mod links;
 pub mod output;
 pub mod robots;
 pub mod sitemap;
+pub mod validator;
 
 pub use links::{extract_links, is_same_origin, normalize_url};
 
@@ -54,6 +55,8 @@ pub struct CrawlResult {
     pub title: Option<String>,
     pub links_found: usize,
     pub error: Option<String>,
+    pub http_status: Option<u16>,
+    pub local_storage: Option<HashMap<String, String>>,
     pub meta: Option<serde_json::Value>,
 }
 
@@ -276,6 +279,25 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
         .await
         .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
 
+    // Check HTTP status via PerformanceNavigationTiming
+    let status_str = session
+        .eval_js(
+            r#"
+            (() => {
+                const nav = performance.getEntriesByType('navigation')[0];
+                if (nav && nav.responseStatus) return String(nav.responseStatus);
+                return "200";
+            })()
+            "#,
+        )
+        .await
+        .unwrap_or_else(|_| "200".to_string());
+
+    let status_num: u16 = status_str.parse().unwrap_or(200);
+    if status_num >= 400 {
+        return Err(crate::AppError::Navigation(format!("HTTP {status_num}")));
+    }
+
     let mut html = session
         .get_html()
         .await
@@ -285,12 +307,32 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
         html = settle_and_recapture(session, settle_ms).await?;
     }
 
+    // Capture localStorage snapshot
+    let local_storage = session
+        .eval_js(
+            r#"
+            (() => {
+                const items = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    items[key] = localStorage.getItem(key);
+                }
+                return JSON.stringify(items);
+            })()
+            "#,
+        )
+        .await
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok());
+
     let title = crate::extraction::extract_title(&html);
     let current_url = session.current_url().unwrap_or(url).to_string();
     Ok(PageCapture {
         url: current_url,
         html,
         title,
+        http_status: Some(status_num),
+        local_storage,
     })
 }
 
@@ -340,6 +382,8 @@ fn error_result(
         title: None,
         links_found: 0,
         error: Some(err.to_string()),
+        http_status: None,
+        local_storage: None,
         meta: None,
     }
 }
@@ -396,6 +440,23 @@ async fn crawl_one_page(
         Err(err) => return error_result(url, depth, &opts.format, &err),
     };
 
+    // Run page validation before any further processing
+    let validator = validator::PageValidator::default();
+    if let Err(reason) = validator.validate(&capture) {
+        return CrawlResult {
+            url: url.to_string(),
+            depth,
+            content: String::new(),
+            format: format_name(&opts.format),
+            title: capture.title,
+            links_found: 0,
+            error: Some(reason),
+            http_status: capture.http_status,
+            local_storage: capture.local_storage,
+            meta: None,
+        };
+    }
+
     // Compare raw HTML links vs live DOM links to decide if page is SPA-rendered
     let raw_links = extract_links(&capture.html, base_url);
     let dom_links = session.get_dom_links().await.unwrap_or_default();
@@ -434,6 +495,8 @@ fn extract_and_build(
             title: capture.title,
             links_found,
             error: None,
+            http_status: capture.http_status,
+            local_storage: capture.local_storage,
             meta,
         },
         Err(e) => CrawlResult {
@@ -444,6 +507,8 @@ fn extract_and_build(
             title: capture.title,
             links_found,
             error: Some(e.to_string()),
+            http_status: capture.http_status,
+            local_storage: capture.local_storage,
             meta,
         },
     }
@@ -763,6 +828,8 @@ mod tests {
                 title: Some("Page 1".to_string()),
                 links_found: 2,
                 error: None,
+                http_status: None,
+                local_storage: None,
                 meta: None,
             },
             CrawlResult {
@@ -773,6 +840,8 @@ mod tests {
                 title: Some("Page 2".to_string()),
                 links_found: 0,
                 error: None,
+                http_status: None,
+                local_storage: None,
                 meta: None,
             },
         ];
@@ -830,6 +899,8 @@ mod tests {
             html: "<html><head><title>Test Page</title></head><body>Hello</body></html>"
                 .to_string(),
             title: Some("Test Page".to_string()),
+            http_status: None,
+            local_storage: None,
         };
 
         let result = extract_and_build(
