@@ -213,10 +213,15 @@ impl SurrealOutput {
     }
 
     async fn process_page_owned(ctx: &PageEmbedCtx<'_, '_>) -> usize {
+        let page_start = std::time::Instant::now();
+
+        let t0 = std::time::Instant::now();
         let _ = ctx.client.delete_chunks_for_page(ctx.page_id).await;
+        let delete_ms = t0.elapsed().as_millis();
 
         let mut chunks = ctx.chunker.chunk(&ctx.result.content);
         if chunks.is_empty() {
+            tracing::info!(url = %ctx.result.url, delete_ms, "page has no chunks");
             return 0;
         }
 
@@ -247,6 +252,7 @@ impl SurrealOutput {
                 return 0;
             }
         };
+        let embed_ms = t0.elapsed().as_millis();
 
         let dim = {
             let mut dim_guard = ctx.detected_dimension.lock().await;
@@ -284,7 +290,8 @@ impl SurrealOutput {
             .collect();
 
         let count = records.len();
-        match ctx.client.insert_chunks(&records).await {
+        let t0 = std::time::Instant::now();
+        let result = match ctx.client.insert_chunks(&records).await {
             Ok(()) => count,
             Err(e) => {
                 eprintln!(
@@ -293,7 +300,21 @@ impl SurrealOutput {
                 );
                 0
             }
-        }
+        };
+        let insert_ms = t0.elapsed().as_millis();
+        let total_ms = page_start.elapsed().as_millis();
+
+        tracing::info!(
+            url = %ctx.result.url,
+            chunks = count,
+            delete_ms,
+            embed_ms,
+            insert_ms,
+            total_ms,
+            "page embedding complete"
+        );
+
+        result
     }
 }
 

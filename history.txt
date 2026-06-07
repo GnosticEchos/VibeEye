@@ -1,0 +1,4 @@
+#V2
+INFO FOR TABLE page; INFO FOR TABLE chunk;
+SELECT COUNT(),group FROM page GROUP BY group;
+SELECT COUNT(),group FROM page GROUP BY group; SELECT COUNT(),group FROM chunk GROUP BY group;
