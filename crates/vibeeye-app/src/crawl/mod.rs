@@ -483,7 +483,7 @@ async fn crawl_one_page(
     extract_and_build(url, depth, capture, opts.format, meta)
 }
 
-fn extract_and_build(
+pub(crate) fn extract_and_build(
     url: &str,
     depth: u32,
     capture: PageCapture,

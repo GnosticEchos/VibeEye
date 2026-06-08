@@ -4,6 +4,7 @@ use anyhow::Result;
 use serde::Serialize;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use vibeeye_app::config::CrawlConfig;
 use vibeeye_app::crawl::{self, CrawlOptions};
@@ -78,6 +79,36 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
                 #[cfg(feature = "embeddings")]
                 embed,
                 devtools,
+            )
+            .await
+        }
+        Commands::Batch {
+            urls_file,
+            format,
+            output,
+            concurrency,
+            timeout,
+            settle_ms,
+            #[cfg(feature = "surrealdb")]
+            surrealdb,
+            #[cfg(feature = "surrealdb")]
+            group,
+            #[cfg(feature = "embeddings")]
+            embed,
+        } => {
+            batch_command(
+                urls_file,
+                format,
+                output,
+                concurrency,
+                timeout,
+                settle_ms,
+                #[cfg(feature = "surrealdb")]
+                surrealdb,
+                #[cfg(feature = "surrealdb")]
+                group,
+                #[cfg(feature = "embeddings")]
+                embed,
             )
             .await
         }
@@ -191,6 +222,90 @@ async fn crawl_command(
     );
 
     crawl::run(opts).await?;
+    // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
+    // during normal process teardown.  std::process::exit runs atexit
+    // handlers so we use libc::_exit which bypasses them entirely.
+    std::io::stdout().flush().unwrap();
+    std::io::stderr().flush().unwrap();
+    unsafe { libc::_exit(0) };
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn batch_command(
+    urls_file: PathBuf,
+    format: Option<String>,
+    output: Option<PathBuf>,
+    concurrency: Option<usize>,
+    timeout: Option<u64>,
+    settle_ms: Option<u64>,
+    #[cfg(feature = "surrealdb")] surrealdb: bool,
+    #[cfg(feature = "surrealdb")] group: Option<String>,
+    #[cfg(feature = "embeddings")] embed: bool,
+) -> Result<()> {
+    tracing::debug!(?urls_file, "batch command");
+
+    let urls = read_seed_urls(&urls_file)?;
+    if urls.is_empty() {
+        return Err(anyhow::anyhow!("no URLs found in {:?}", urls_file));
+    }
+
+    let content_format = match format.as_deref() {
+        Some("html") => ContentFormat::Html,
+        Some("text") => ContentFormat::Text,
+        _ => ContentFormat::Markdown,
+    };
+
+    #[cfg(feature = "surrealdb")]
+    let surreal_output = if surrealdb {
+        let group_name =
+            group.ok_or_else(|| anyhow::anyhow!("--group is required when using --surrealdb"))?;
+        let client = vibeeye_app::db::DbClient::connect(&db_url()).await?;
+        client.use_ns_db("vibeeye", "crawl").await?;
+        client.bootstrap().await?;
+        let mut surreal = vibeeye_app::db::SurrealOutput::new(client, &urls[0], Some(&group_name));
+        #[cfg(feature = "embeddings")]
+        if embed {
+            let config = load_embedding_config().await?;
+            surreal.embed_config = Some(config);
+        }
+        Some(surreal)
+    } else {
+        None
+    };
+
+    let mut outputs: Vec<Arc<dyn vibeeye_app::crawl::output::CrawlOutput>> = Vec::new();
+
+    #[cfg(feature = "surrealdb")]
+    if let Some(surreal) = surreal_output {
+        outputs.push(Arc::new(surreal));
+    }
+
+    if let Some(dir) = output {
+        let ext = match content_format {
+            ContentFormat::Markdown => "md",
+            ContentFormat::Html => "html",
+            ContentFormat::Text => "txt",
+        };
+        outputs.push(Arc::new(vibeeye_app::crawl::output::DirectoryOutput::new(
+            dir, ext,
+        )));
+    }
+
+    if outputs.is_empty() {
+        outputs.push(Arc::new(vibeeye_app::crawl::output::StdoutOutput));
+    }
+
+    let opts = vibeeye_app::batch::BatchOptions {
+        urls,
+        format: content_format,
+        timeout_secs: timeout.unwrap_or(15),
+        settle_ms: settle_ms.unwrap_or(2000),
+        concurrency: concurrency.unwrap_or(4),
+        outputs,
+    };
+
+    vibeeye_app::batch::run(opts).await?;
+
     // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
     // during normal process teardown.  std::process::exit runs atexit
     // handlers so we use libc::_exit which bypasses them entirely.

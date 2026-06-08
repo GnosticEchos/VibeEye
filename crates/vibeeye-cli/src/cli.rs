@@ -44,6 +44,47 @@ pub enum Commands {
         format: String,
     },
 
+    /// Fetch a list of URLs without link discovery or BFS crawling
+    Batch {
+        /// File containing URLs to fetch (one per line, use `-` for stdin)
+        urls_file: PathBuf,
+
+        /// Output format: markdown, html, or text
+        #[arg(short, long)]
+        format: Option<String>,
+
+        /// Directory to write per-page files (JSON Lines to stdout if omitted)
+        #[arg(short, long, value_name = "DIR")]
+        output: Option<PathBuf>,
+
+        /// Maximum concurrent fetches
+        #[arg(long)]
+        concurrency: Option<usize>,
+
+        /// Per-page timeout in seconds
+        #[arg(long)]
+        timeout: Option<u64>,
+
+        /// Settle time for SPA content in milliseconds
+        #[arg(long)]
+        settle_ms: Option<u64>,
+
+        /// Persist results to SurrealDB
+        #[cfg(feature = "surrealdb")]
+        #[arg(long)]
+        surrealdb: bool,
+
+        /// Target group name (required when using --surrealdb)
+        #[cfg(feature = "surrealdb")]
+        #[arg(long)]
+        group: Option<String>,
+
+        /// Generate embeddings after fetch (requires --surrealdb)
+        #[cfg(feature = "embeddings")]
+        #[arg(long)]
+        embed: bool,
+    },
+
     /// BFS crawl a website starting from a seed URL
     Crawl {
         /// Seed URL to start crawling from

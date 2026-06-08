@@ -29,7 +29,9 @@ impl CrawlOutput for UrlListOutput {
             .append(true)
             .open(&self.path)
             .await
-            .map_err(|e| crate::AppError::InvalidInput(format!("failed to open URL list file: {e}")))?;
+            .map_err(|e| {
+                crate::AppError::InvalidInput(format!("failed to open URL list file: {e}"))
+            })?;
 
         for result in results {
             if result.error.is_none() {

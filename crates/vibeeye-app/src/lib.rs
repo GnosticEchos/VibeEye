@@ -3,6 +3,7 @@
 //! Shared library containing browser logic, content extraction,
 //! and the SonarDiscovery trait for CLI/MCP parity.
 
+pub mod batch;
 pub mod browser;
 #[cfg(feature = "embeddings")]
 pub mod chunk;
