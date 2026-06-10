@@ -65,18 +65,34 @@ surrealdb_db = "crawl"
 # Provider type.  Only "openai-compatible" is supported.  (required)
 provider = "openai-compatible"
 
-# HTTP endpoint for the embeddings API.  (required)
+# HTTP endpoint for the embeddings API.
+# Use either `endpoint` (single) or `endpoints` (array for round-robin load balancing).
 # Examples:
 #   Ollama:    http://localhost:11434/v1/embeddings
 #   OpenAI:    https://api.openai.com/v1/embeddings
+#   FLM (NPU): http://localhost:7680/v1/embeddings
 endpoint = "http://localhost:11434/v1/embeddings"
 
+# Multi-endpoint round-robin (optional — overrides `endpoint`).
+# Useful when running multiple llama-server or FLM instances in parallel.
+# endpoints = [
+#     "http://localhost:7680/v1/embeddings",
+#     "http://localhost:7681/v1/embeddings",
+#     "http://localhost:7682/v1/embeddings",
+#     "http://localhost:7683/v1/embeddings",
+# ]
+
 # Model name.  (required)
-# Examples: nomic-embed-text, text-embedding-3-small, bge-large-en-v1.5
+# Examples:
+#   Ollama / llama.cpp:  nomic-embed-text, mxbai-embed-large
+#   FLM (AMD NPU):       embed-gemma:300m  (requires an LLM loaded concurrently)
 model = "nomic-embed-text"
 
 # Vector dimension (optional — auto-detected from first API response).
-# Set explicitly if auto-detection causes issues.
+# Set explicitly to skip the probe request.
+#   nomic-embed-text:    768
+#   embed-gemma:300m:    768
+#   text-embedding-3-small: 1536
 # dimensions = 768
 
 # Max tokens per context window.  (default: 0 = use model default)
@@ -93,6 +109,9 @@ chunk_overlap = 50
 
 # Max concurrent embedding HTTP requests.  (default: 4)
 # Increase if your embedding server has spare capacity.
+# For FLM on AMD NPU: set to 1 — the NPU queue is single-threaded and
+# concurrent batches cause lockups. The client still sends retries with
+# exponential backoff if a batch stalls.
 embed_concurrency = 4
 
 
