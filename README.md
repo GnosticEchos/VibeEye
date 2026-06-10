@@ -6,6 +6,7 @@ Headless browser for agentic content extraction. Built on [Servo](https://servo.
 
 - **Real browser engine** — Servo renders JavaScript, handles SPAs (crates.io, docs.rs), and settles dynamic content
 - **Structured extraction** — Markdown, HTML, or plain text with automatic JSON-LD / Open Graph metadata capture
+- **Instant page cleanup** — `extract` strips bloat (nav, ads, scripts) so you can paste clean content into your LLM chat
 - **SurrealDB persistence** — Store pages and chunks with BM25 full-text + HNSW vector indexes
 - **Semantic search** — BM25 keyword search, k-NN vector search, and hybrid ranking
 - **Batch processing** — Crawl a list of URLs in parallel with shared DB output
@@ -24,6 +25,21 @@ Headless browser for agentic content extraction. Built on [Servo](https://servo.
 
 ```bash
 cargo build --release --features "surrealdb embeddings"
+```
+
+### Extract a page
+
+The fastest way to get clean content from any URL — no database needed. Strips navigation, ads, and scripts, leaving readable Markdown you can paste straight into an LLM chat.
+
+```bash
+# Clean Markdown (default)
+./target/release/vibe-eye extract https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+
+# Plain text
+./target/release/vibe-eye extract https://example.com/article --format text
+
+# Raw HTML
+./target/release/vibe-eye extract https://example.com/article --format html
 ```
 
 ### Configure
@@ -77,6 +93,7 @@ embed_concurrency = 4
 ## CLI Commands
 
 ```
+vibe-eye extract <URL>     Clean single-page extraction (Markdown / text / HTML)
 vibe-eye crawl <URL>       BFS crawl from seed URL
 vibe-eye batch <FILE>      Batch crawl from URL list (one per line)
 vibe-eye db list           List crawl groups
