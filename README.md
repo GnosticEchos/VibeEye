@@ -21,10 +21,34 @@ Headless browser for agentic content extraction. Built on [Servo](https://servo.
 - SurrealDB (standalone server, or use embedded SurrealKV)
 - An embedding server (Ollama, llama.cpp, or FLM)
 
+> **No built-in site authentication.** Pages behind logins are not currently supported. You can only crawl and extract publicly accessible content.
+
 ### Build
 
 ```bash
 cargo build --release --features "surrealdb embeddings"
+```
+
+### Minimal usage — no database needed
+
+All extraction and crawling works without SurrealDB or embeddings. Just build without extra features:
+
+```bash
+cargo build --release
+```
+
+```bash
+# Extract a single page to clean Markdown
+./target/release/vibe-eye extract https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+
+# Snapshot a page (URL, title, body text, raw HTML)
+./target/release/vibe-eye snapshot https://example.com
+
+# Navigate and settle a JS-heavy page (returns title + body)
+./target/release/vibe-eye navigate https://crates.io/crates/serde
+
+# Crawl a site and stream results to stdout
+./target/release/vibe-eye crawl https://doc.rust-lang.org/book --max-pages 10
 ```
 
 ### Extract a page
