@@ -308,10 +308,10 @@ impl DbClient {
             query = query.bind((format!("dimensions{i}"), chunk.dimensions));
             query = query.bind((format!("created_at{i}"), chunk.created_at));
         }
-        tokio::time::timeout(std::time::Duration::from_secs(30), query)
+        tokio::time::timeout(std::time::Duration::from_secs(120), query)
             .await
             .map_err(|_| {
-                crate::AppError::InvalidInput("chunk insert timed out after 30s".into())
+                crate::AppError::InvalidInput("chunk insert timed out after 120s".into())
             })??;
         Ok(())
     }

@@ -10,7 +10,10 @@ pub struct EmbeddingConfig {
     /// Provider type — only "openai-compatible" is supported.
     pub provider: String,
     /// HTTP endpoint URL (e.g. "http://localhost:11434/v1/embeddings").
+    #[serde(default)]
     pub endpoint: String,
+    /// Multiple HTTP endpoint URLs for load balancing across instances.
+    pub endpoints: Option<Vec<String>>,
     /// Model name (e.g. "nomic-embed-text").
     pub model: String,
     /// Vector dimension expected from this model (optional — auto-detected from server response).
@@ -46,6 +49,18 @@ impl EmbeddingConfig {
     /// Embedding concurrency with default.
     pub fn embed_concurrency(&self) -> usize {
         self.embed_concurrency.unwrap_or(4).max(1)
+    }
+
+    /// Return all endpoint URLs for load balancing.
+    /// If `endpoints` is set, returns those; otherwise returns a single-element
+    /// vec containing `endpoint`.
+    pub fn endpoints(&self) -> Vec<String> {
+        if let Some(eps) = &self.endpoints {
+            if !eps.is_empty() {
+                return eps.clone();
+            }
+        }
+        vec![self.endpoint.clone()]
     }
 }
 
