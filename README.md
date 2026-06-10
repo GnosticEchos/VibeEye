@@ -44,7 +44,7 @@ cargo build --release
 # Snapshot a page (URL, title, body text, raw HTML)
 ./target/release/vibe-eye snapshot https://example.com
 
-# Navigate and settle a JS-heavy page (returns title + body)
+# Navigate and settle a JS-heavy page (returns title only)
 ./target/release/vibe-eye navigate https://crates.io/crates/serde
 
 # Crawl a site and stream results to stdout
