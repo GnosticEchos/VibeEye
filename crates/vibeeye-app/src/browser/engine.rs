@@ -348,8 +348,13 @@ fn navigate_cmd(
         std::thread::yield_now();
     }
 
+    let final_url = webview
+        .url()
+        .map(|u| u.to_string())
+        .unwrap_or_else(|| url.to_string());
+
     *active_webview = Some(webview);
-    Ok(url.to_string())
+    Ok(final_url)
 }
 
 fn get_html_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<String> {

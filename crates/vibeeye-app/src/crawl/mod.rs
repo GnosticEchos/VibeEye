@@ -284,8 +284,12 @@ async fn fetch_with_session(
 }
 
 async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Result<PageCapture> {
+    let resolved_url = crate::tools::common::resolve_redirect_url(url)
+        .await
+        .unwrap_or_else(|| url.to_string());
+
     session
-        .navigate(url)
+        .navigate(&resolved_url)
         .await
         .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
 
@@ -336,7 +340,7 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
         .and_then(|s| serde_json::from_str(&s).ok());
 
     let title = crate::extraction::extract_title(&html);
-    let current_url = session.current_url().unwrap_or(url).to_string();
+    let current_url = session.current_url().unwrap_or(&resolved_url).to_string();
     Ok(PageCapture {
         url: current_url,
         html,
@@ -398,6 +402,7 @@ fn error_result(
     }
 }
 
+#[cfg(test)]
 fn enqueue_discovered(
     html: &str,
     depth: u32,
@@ -467,8 +472,13 @@ async fn crawl_one_page(
         };
     }
 
+    // Use the actual loaded page URL for resolving relative links.
+    // The browser may have redirected (e.g. /book -> /book/), so capture.url
+    // reflects the true base for relative href resolution.
+    let page_url = Url::parse(&capture.url).unwrap_or_else(|_| base_url.clone());
+
     // Compare raw HTML links vs live DOM links to decide if page is SPA-rendered
-    let raw_links = extract_links(&capture.html, base_url);
+    let raw_links = extract_links(&capture.html, &page_url);
     let dom_links = session.get_dom_links().await.unwrap_or_default();
     let use_dom = dom_links.len() > raw_links.len().saturating_mul(2) && dom_links.len() > 5;
 
@@ -476,7 +486,7 @@ async fn crawl_one_page(
         debug!(%url, raw = raw_links.len(), dom = dom_links.len(), "using rendered DOM links");
         enqueue_discovered_links(&dom_links, depth, base_url, opts, visited, queue);
     } else {
-        enqueue_discovered(&capture.html, depth, base_url, opts, visited, queue);
+        enqueue_discovered_links(&raw_links, depth, base_url, opts, visited, queue);
     }
 
     let meta = extract_structured_meta(session).await.ok();
@@ -484,21 +494,19 @@ async fn crawl_one_page(
 }
 
 pub(crate) fn extract_and_build(
-    url: &str,
+    _url: &str,
     depth: u32,
     capture: PageCapture,
     format: ContentFormat,
     meta: Option<serde_json::Value>,
 ) -> CrawlResult {
-    let links_found = extract_links(
-        &capture.html,
-        &Url::parse(url).unwrap_or_else(|_| Url::parse("http://localhost").unwrap()),
-    )
-    .len();
+    let page_url =
+        Url::parse(&capture.url).unwrap_or_else(|_| Url::parse("http://localhost").unwrap());
+    let links_found = extract_links(&capture.html, &page_url).len();
 
     match extraction::extract(&capture.html, format) {
         Ok(content) => CrawlResult {
-            url: url.to_string(),
+            url: capture.url.clone(),
             depth,
             content,
             format: format_name(&format),
@@ -510,7 +518,7 @@ pub(crate) fn extract_and_build(
             meta,
         },
         Err(e) => CrawlResult {
-            url: url.to_string(),
+            url: capture.url,
             depth,
             content: String::new(),
             format: format_name(&format),
