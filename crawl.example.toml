@@ -115,6 +115,28 @@ chunk_overlap = 50
 embed_concurrency = 4
 
 
+# ── CLI theming (help-tree output styling) ─────────────────────────────────
+
+# Help-tree display is styled via ANSI escape codes.  Each token type
+# (command names, option flags, and descriptions) can have its own
+# emphasis and colour.
+#
+# style values: "normal", "bold", "italic", "bold_italic"
+# colour values: any hex string #RRGGBB (e.g. "#7ee7e6")
+
+[cli.help_tree.command]
+style = "bold"
+color = "#7ee7e6"
+
+[cli.help_tree.options]
+style = "normal"
+color = "#ff69b4"
+
+[cli.help_tree.description]
+style = "italic"
+color = "#90a2af"
+
+
 # ── Per-domain overrides ────────────────────────────────────────────────────
 #
 # [domain."example.com"]

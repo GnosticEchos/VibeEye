@@ -6,12 +6,13 @@ use clap::{Args, Command, CommandFactory};
 use serde_json::{Value, json};
 use std::collections::HashSet;
 
-/// Output format for `--help-tree`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
-pub enum HelpTreeOutputFormat {
-    Text,
-    Json,
-}
+pub mod render;
+pub mod theme;
+
+pub use theme::{
+    HelpTreeColor, HelpTreeInvocation, HelpTreeOpts, HelpTreeOutputFormat, HelpTreeStyle,
+    HelpTreeTheme,
+};
 
 /// Reusable clap arguments for `--help-tree` discovery flags.
 ///
@@ -51,33 +52,14 @@ pub struct HelpTreeArgs {
         value_enum
     )]
     pub tree_output: Option<HelpTreeOutputFormat>,
-}
 
-/// Parsed result from scanning argv for `--help-tree`.
-#[derive(Clone, Debug)]
-pub struct HelpTreeInvocation {
-    pub opts: HelpTreeOpts,
-    pub path: Vec<String>,
-}
+    /// Tree text styling mode (`rich` uses bold/italic + optional colour).
+    #[arg(long = "tree-style", value_enum, default_value = "rich")]
+    pub tree_style: HelpTreeStyle,
 
-/// Options controlling help-tree behavior.
-#[derive(Clone, Debug)]
-pub struct HelpTreeOpts {
-    pub depth_limit: Option<usize>,
-    pub ignore: Vec<String>,
-    pub tree_all: bool,
-    pub output: HelpTreeOutputFormat,
-}
-
-impl Default for HelpTreeOpts {
-    fn default() -> Self {
-        Self {
-            depth_limit: None,
-            ignore: Vec::new(),
-            tree_all: false,
-            output: HelpTreeOutputFormat::Text,
-        }
-    }
+    /// Tree colour mode (`auto` uses ANSI colours only on TTY output).
+    #[arg(long = "tree-color", value_enum, default_value = "auto")]
+    pub tree_color: HelpTreeColor,
 }
 
 /// Scan `argv` for `--help-tree` and its related flags.
@@ -122,6 +104,12 @@ fn process_one_arg(state: &mut ParseState, argv: &[String], idx: usize) -> Resul
             Ok(idx)
         }
         "--tree-output" => parse_tree_output_arg(state, argv, idx),
+        arg_str if arg_str == "--tree-style" || arg_str.starts_with("--tree-style=") => {
+            parse_tree_style_arg(state, argv, idx, arg)
+        }
+        arg_str if arg_str == "--tree-color" || arg_str.starts_with("--tree-color=") => {
+            parse_tree_color_arg(state, argv, idx, arg)
+        }
         "--format" | "-f" => parse_format_arg(state, argv, idx, arg),
         token if token.starts_with('-') => Ok(idx),
         token => {
@@ -187,6 +175,8 @@ struct ParseState {
     ignore: Vec<String>,
     tree_all: bool,
     output: Option<HelpTreeOutputFormat>,
+    style: Option<HelpTreeStyle>,
+    color: Option<HelpTreeColor>,
     path: Vec<String>,
 }
 
@@ -198,6 +188,9 @@ impl ParseState {
                 ignore: self.ignore,
                 tree_all: self.tree_all,
                 output: self.output.unwrap_or(HelpTreeOutputFormat::Text),
+                style: self.style.unwrap_or(HelpTreeStyle::Rich),
+                color: self.color.unwrap_or(HelpTreeColor::Auto),
+                theme: HelpTreeTheme::default(),
             },
             path: self.path,
         }
@@ -231,6 +224,47 @@ fn parse_format_value(value: String) -> Result<HelpTreeOutputFormat, String> {
         "json" => Ok(HelpTreeOutputFormat::Json),
         _ => Err(format!("Invalid --format value: '{value}'")),
     }
+}
+
+fn parse_tree_style_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = if let Some((_, v)) = arg.split_once('=') {
+        v.to_string()
+    } else {
+        let next = idx + 1;
+        parse_string(argv, next, "--tree-style")?
+    };
+    state.style = Some(match value.as_str() {
+        "plain" => HelpTreeStyle::Plain,
+        "rich" => HelpTreeStyle::Rich,
+        _ => return Err(format!("Invalid --tree-style value: '{value}'")),
+    });
+    Ok(idx)
+}
+
+fn parse_tree_color_arg(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = if let Some((_, v)) = arg.split_once('=') {
+        v.to_string()
+    } else {
+        let next = idx + 1;
+        parse_string(argv, next, "--tree-color")?
+    };
+    state.color = Some(match value.as_str() {
+        "auto" => HelpTreeColor::Auto,
+        "always" => HelpTreeColor::Always,
+        "never" => HelpTreeColor::Never,
+        _ => return Err(format!("Invalid --tree-color value: '{value}'")),
+    });
+    Ok(idx)
 }
 
 /// Generate the JSON help-tree for the command identified by `requested_path`.
@@ -281,7 +315,14 @@ pub fn run_for_path<CF: CommandFactory>(
             let ignore: HashSet<String> = opts.ignore.iter().cloned().collect();
             println!(
                 "{}",
-                command_to_text(selected, &ignore, opts.tree_all, opts.depth_limit, 0)
+                render::command_to_text(
+                    selected,
+                    &ignore,
+                    opts.tree_all,
+                    opts.depth_limit,
+                    0,
+                    &opts
+                )
             );
             println!();
             println!(
@@ -310,155 +351,6 @@ fn select_command_by_path<'a>(root: &'a Command, tokens: &[String]) -> (&'a Comm
     }
 
     (current, resolved)
-}
-
-const TREE_ALIGN_WIDTH: usize = 28;
-const MIN_DOTS: usize = 4;
-
-fn command_to_text(
-    cmd: &Command,
-    ignore: &HashSet<String>,
-    tree_all: bool,
-    depth_limit: Option<usize>,
-    depth: usize,
-) -> String {
-    let mut lines = Vec::new();
-    render_command_text(cmd, ignore, tree_all, depth_limit, depth, &mut lines, "");
-    lines.join("\n")
-}
-
-fn render_command_text(
-    cmd: &Command,
-    ignore: &HashSet<String>,
-    tree_all: bool,
-    depth_limit: Option<usize>,
-    depth: usize,
-    lines: &mut Vec<String>,
-    prefix: &str,
-) {
-    if let Some(limit) = depth_limit {
-        if depth > limit {
-            return;
-        }
-    }
-    if ignore.contains(cmd.get_name()) {
-        return;
-    }
-
-    lines.push(format_command_line(cmd, prefix, depth));
-
-    let flags: Vec<_> = cmd
-        .get_arguments()
-        .filter(|a| !a.is_positional())
-        .filter(|a| {
-            let id = a.get_id().as_str();
-            id != "help" && id != "version"
-        })
-        .collect();
-
-    let subcommands: Vec<_> = cmd
-        .get_subcommands()
-        .filter(|sub| tree_all || !sub.is_hide_set())
-        .filter(|sub| !ignore.contains(sub.get_name()))
-        .filter(|sub| sub.get_name() != "help")
-        .collect();
-
-    let total_children = flags.len() + subcommands.len();
-
-    for (i, arg) in flags.iter().enumerate() {
-        let is_last = i == total_children - 1;
-        let next_prefix = next_tree_prefix(prefix, depth, is_last);
-        lines.push(format_flag_line(arg, &next_prefix));
-    }
-
-    for (i, sub) in subcommands.iter().enumerate() {
-        let idx = flags.len() + i;
-        let is_last = idx == total_children - 1;
-        let next_prefix = next_tree_prefix(prefix, depth, is_last);
-        render_command_text(
-            sub,
-            ignore,
-            tree_all,
-            depth_limit,
-            depth + 1,
-            lines,
-            &next_prefix,
-        );
-    }
-}
-
-fn format_command_line(cmd: &Command, prefix: &str, depth: usize) -> String {
-    let mut line = prefix.to_string();
-    if depth > 0 {
-        line.push_str("├── ");
-    }
-    line.push_str(cmd.get_name());
-
-    let arg_names: Vec<String> = cmd
-        .get_positionals()
-        .map(|a| format!("<{}>", a.get_id()))
-        .collect();
-    if !arg_names.is_empty() {
-        line.push(' ');
-        line.push_str(&arg_names.join(" "));
-    }
-
-    let desc = cmd.get_about().map(|a| a.to_string()).unwrap_or_default();
-    pad_and_append_description(&mut line, &desc);
-    line
-}
-
-fn format_flag_line(arg: &clap::Arg, prefix: &str) -> String {
-    let mut line = prefix.to_string();
-    line.push_str("├── ");
-
-    let mut parts = Vec::new();
-    if let Some(short) = arg.get_short() {
-        parts.push(format!("-{short}"));
-    }
-    if let Some(long) = arg.get_long() {
-        parts.push(format!("--{long}"));
-    }
-    if parts.is_empty() {
-        parts.push(arg.get_id().to_string());
-    }
-
-    line.push_str(&parts.join(", "));
-
-    let value_names = arg.get_value_names();
-    let has_value = arg.get_value_hint() != clap::ValueHint::Unknown
-        || arg.get_num_args().is_some_and(|n| n.min_values() > 0);
-    if has_value {
-        if let Some(names) = value_names {
-            if let Some(name) = names.iter().next() {
-                line.push(' ');
-                line.push_str(&format!("<{name}>"));
-            }
-        }
-    }
-
-    let desc = arg.get_help().map(|h| h.to_string()).unwrap_or_default();
-    pad_and_append_description(&mut line, &desc);
-    line
-}
-
-fn pad_and_append_description(line: &mut String, desc: &str) {
-    let content_len = line.len();
-    let padding_needed = TREE_ALIGN_WIDTH.saturating_sub(content_len);
-    let dots = padding_needed.max(MIN_DOTS);
-    line.push_str(&" ".repeat(dots));
-    line.push(' ');
-    line.push_str(desc);
-}
-
-fn next_tree_prefix(prefix: &str, depth: usize, is_last: bool) -> String {
-    if depth == 0 {
-        String::new()
-    } else if is_last {
-        format!("{prefix}    ")
-    } else {
-        format!("{prefix}│   ")
-    }
 }
 
 fn command_to_json(
@@ -782,7 +674,8 @@ mod tests {
                 .help("Be verbose"),
         );
         let arg = cmd.get_arguments().next().unwrap();
-        let line = format_flag_line(arg, "");
+        let opts = HelpTreeOpts::default();
+        let line = render::format_flag_line(arg, "", &opts);
         assert!(line.contains("-v"));
         assert!(line.contains("--verbose"));
         assert!(line.contains("Be verbose"));
@@ -793,7 +686,8 @@ mod tests {
         use clap::{Arg, Command};
         let cmd = Command::new("test").arg(Arg::new("output").long("output").help("Output path"));
         let arg = cmd.get_arguments().next().unwrap();
-        let line = format_flag_line(arg, "");
+        let opts = HelpTreeOpts::default();
+        let line = render::format_flag_line(arg, "", &opts);
         // Tree prefix contains dashes, so just assert short flag not present as "-o "
         assert!(!line.contains("-o, "));
         assert!(line.contains("--output"));
@@ -812,7 +706,8 @@ mod tests {
                 .num_args(1),
         );
         let arg = cmd.get_arguments().next().unwrap();
-        let line = format_flag_line(arg, "");
+        let opts = HelpTreeOpts::default();
+        let line = render::format_flag_line(arg, "", &opts);
         assert!(line.contains("--config"));
         assert!(line.contains("<")); // value placeholder
         assert!(line.contains("Config file"));
@@ -824,7 +719,8 @@ mod tests {
         let cmd =
             Command::new("test").arg(Arg::new("my-flag").help("A custom flag without short/long"));
         let arg = cmd.get_arguments().next().unwrap();
-        let line = format_flag_line(arg, "");
+        let opts = HelpTreeOpts::default();
+        let line = render::format_flag_line(arg, "", &opts);
         assert!(line.contains("my-flag"));
         assert!(line.contains("A custom flag without short/long"));
     }

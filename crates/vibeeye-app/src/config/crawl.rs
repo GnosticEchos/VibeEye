@@ -58,6 +58,35 @@ pub struct CrawlProfile {
     pub group: Option<String>,
     /// Embedding provider configuration.
     pub embeddings: Option<super::embeddings::EmbeddingConfig>,
+    /// CLI display configuration (help-tree styling, etc.)
+    pub cli: Option<CliConfig>,
+}
+
+/// CLI-level configuration (display, theming, etc.).
+#[derive(Debug, Clone, Deserialize)]
+pub struct CliConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub help_tree: Option<HelpTreeConfig>,
+}
+
+/// Help-tree theming overrides per token type.
+#[derive(Debug, Clone, Deserialize)]
+pub struct HelpTreeConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<TextThemeConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<TextThemeConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<TextThemeConfig>,
+}
+
+/// Single token style + color override.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TextThemeConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
 }
 
 macro_rules! merge_opt {
@@ -93,6 +122,7 @@ impl CrawlProfile {
         merge_opt!(self, other, surrealdb_db);
         merge_opt!(self, other, group);
         merge_opt!(self, other, embeddings);
+        merge_opt!(self, other, cli);
     }
 }
 
@@ -104,6 +134,9 @@ pub struct CrawlConfig {
     pub domain: HashMap<String, CrawlProfile>,
     #[serde(default)]
     pub subdomain: HashMap<String, CrawlProfile>,
+    /// Top-level CLI theming config (preferred over global.cli).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cli: Option<CliConfig>,
 }
 
 impl CrawlConfig {

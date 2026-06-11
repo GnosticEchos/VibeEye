@@ -6,7 +6,7 @@
 pub mod crawl;
 pub mod embeddings;
 
-pub use crawl::{CrawlConfig, CrawlProfile};
+pub use crawl::{CliConfig, CrawlConfig, CrawlProfile, HelpTreeConfig, TextThemeConfig};
 pub use embeddings::{EmbeddingConfig, interpolate_env_vars};
 
 /// Resolve the SurrealDB connection URL.

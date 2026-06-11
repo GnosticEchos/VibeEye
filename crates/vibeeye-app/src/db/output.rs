@@ -98,6 +98,15 @@ impl crate::crawl::output::CrawlOutput for SurrealOutput {
 }
 
 #[cfg(feature = "embeddings")]
+#[derive(Clone)]
+struct ChunkEntry {
+    page_id: RecordId,
+    chunk_index: i32,
+    chunk_text: String,
+    heading_path: Vec<String>,
+}
+
+#[cfg(feature = "embeddings")]
 impl SurrealOutput {
     async fn embed_and_index(
         &self,
@@ -106,6 +115,30 @@ impl SurrealOutput {
         config: &crate::config::embeddings::EmbeddingConfig,
     ) -> anyhow::Result<()> {
         let provider = std::sync::Arc::new(crate::embed::EmbeddingProvider::new(config)?);
+
+        let entries = self.prepare_chunks(results, page_ids, config).await;
+        if entries.is_empty() {
+            return Ok(());
+        }
+
+        let known_dim = self.probe_dimension(&entries, &provider).await?;
+
+        let (records, monitor, progress) =
+            Self::embed_batches(entries, provider, config, &self.group, known_dim).await;
+
+        let count = self
+            .insert_chunk_records(records, monitor, progress)
+            .await?;
+        println!("Chunks inserted: {}", count);
+        Ok(())
+    }
+
+    async fn prepare_chunks(
+        &self,
+        results: &[CrawlResult],
+        page_ids: &HashMap<String, RecordId>,
+        config: &crate::config::embeddings::EmbeddingConfig,
+    ) -> Vec<ChunkEntry> {
         let chunker = crate::chunk::Chunker::new(
             config.target_chunk_size(),
             config.chunk_overlap(),
@@ -119,27 +152,14 @@ impl SurrealOutput {
             })
             .collect();
 
-        if eligible.is_empty() {
-            return Ok(());
-        }
-
-        // Phase 1: Chunk all pages into a flat list.
-        #[derive(Clone)]
-        struct ChunkEntry {
-            page_id: RecordId,
-            chunk_index: i32,
-            chunk_text: String,
-            heading_path: Vec<String>,
-        }
-
-        let mut all_entries: Vec<ChunkEntry> = Vec::new();
+        let mut entries = Vec::new();
+        const MAX_CHUNKS_PER_PAGE: usize = 1000;
         for result in eligible {
             let page_id = page_ids.get(&result.url).unwrap().clone();
             let mut chunks = chunker.chunk(&result.content);
             if chunks.is_empty() {
                 continue;
             }
-            const MAX_CHUNKS_PER_PAGE: usize = 1000;
             if chunks.len() > MAX_CHUNKS_PER_PAGE {
                 tracing::warn!(
                     url = %result.url,
@@ -150,7 +170,7 @@ impl SurrealOutput {
                 chunks.truncate(MAX_CHUNKS_PER_PAGE);
             }
             for (idx, chunk) in chunks.into_iter().enumerate() {
-                all_entries.push(ChunkEntry {
+                entries.push(ChunkEntry {
                     page_id: page_id.clone(),
                     chunk_index: idx as i32,
                     chunk_text: chunk.text,
@@ -158,52 +178,62 @@ impl SurrealOutput {
                 });
             }
         }
+        entries
+    }
 
-        if all_entries.is_empty() {
-            return Ok(());
-        }
-
-        // Phase 2: Probe dimension with a small initial batch.
-        let mut known_dim: Option<usize> = None;
-        {
-            let probe_size = all_entries.len().min(50);
-            let probe_texts: Vec<String> = all_entries[..probe_size]
-                .iter()
-                .map(|e| e.chunk_text.clone())
-                .collect();
-            if let Ok(embeddings) = provider.embed_batch(&probe_texts).await {
-                if let Some(first_emb) = embeddings.first() {
-                    let d = first_emb.len();
-                    self.client.ensure_embeddings_index(d).await?;
-                    known_dim = Some(d);
-                    tracing::info!(dimension = d, "auto-detected embedding dimension");
-                }
+    async fn probe_dimension(
+        &self,
+        entries: &[ChunkEntry],
+        provider: &crate::embed::EmbeddingProvider,
+    ) -> anyhow::Result<Option<usize>> {
+        let probe_size = entries.len().min(50);
+        let probe_texts: Vec<String> = entries[..probe_size]
+            .iter()
+            .map(|e| e.chunk_text.clone())
+            .collect();
+        if let Ok(embeddings) = provider.embed_batch(&probe_texts).await {
+            if let Some(first_emb) = embeddings.first() {
+                let d = first_emb.len();
+                self.client.ensure_embeddings_index(d).await?;
+                tracing::info!(dimension = d, "auto-detected embedding dimension");
+                return Ok(Some(d));
             }
         }
+        Ok(None)
+    }
 
-        let total_chunks = all_entries.len();
+    async fn embed_batches(
+        entries: Vec<ChunkEntry>,
+        provider: std::sync::Arc<crate::embed::EmbeddingProvider>,
+        config: &crate::config::embeddings::EmbeddingConfig,
+        group: &str,
+        known_dim: Option<usize>,
+    ) -> (
+        Vec<crate::db::models::ChunkRecord>,
+        std::sync::Arc<EmbedMonitor>,
+        std::sync::Arc<std::sync::Mutex<crate::progress::ProgressReporter>>,
+    ) {
+        let total_chunks = entries.len();
         let embed_concurrency = config.embed_concurrency();
         let monitor = std::sync::Arc::new(EmbedMonitor::new(embed_concurrency));
-        let total_inserted = std::sync::atomic::AtomicUsize::new(0);
         let progress = crate::progress::ProgressReporter::new(total_chunks as u64, "Embedding");
         let progress = std::sync::Arc::new(std::sync::Mutex::new(progress));
 
-        // Phase 3: Embed in large batches (200 chunks per request).
         const EMBED_BATCH_SIZE: usize = 100;
         let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(embed_concurrency));
         let mut tasks = tokio::task::JoinSet::new();
 
-        let batches: Vec<Vec<ChunkEntry>> = all_entries
+        let batches: Vec<Vec<ChunkEntry>> = entries
             .chunks(EMBED_BATCH_SIZE)
             .map(|chunk| chunk.to_vec())
             .collect();
         eprintln!(
             "DEBUG: {} entries -> {} batches",
-            all_entries.len(),
+            total_chunks,
             batches.len()
         );
 
-        let group = self.group.clone();
+        let group = group.to_string();
         let model = config.model.clone();
 
         for (batch_idx, batch) in batches.into_iter().enumerate() {
@@ -260,7 +290,6 @@ impl SurrealOutput {
             });
         }
 
-        // Phase 4: Collect all chunk records and insert per-page.
         let mut all_records: Vec<crate::db::models::ChunkRecord> = Vec::new();
         let mut last_report = std::time::Instant::now();
         let mut task_count = 0;
@@ -290,14 +319,24 @@ impl SurrealOutput {
             task_count
         );
 
+        (all_records, monitor, progress)
+    }
+
+    async fn insert_chunk_records(
+        &self,
+        records: Vec<crate::db::models::ChunkRecord>,
+        monitor: std::sync::Arc<EmbedMonitor>,
+        progress: std::sync::Arc<std::sync::Mutex<crate::progress::ProgressReporter>>,
+    ) -> anyhow::Result<usize> {
         #[allow(clippy::mutable_key_type)]
         let mut by_page: HashMap<RecordId, Vec<crate::db::models::ChunkRecord>> = HashMap::new();
-        for record in all_records {
+        for record in records {
             by_page.entry(record.page.clone()).or_default().push(record);
         }
         eprintln!("DEBUG: grouped into {} pages", by_page.len());
 
         let mut failed_pages = 0;
+        let total_inserted = std::sync::atomic::AtomicUsize::new(0);
         for (page_id, records) in by_page {
             let _ = self.client.delete_chunks_for_page(&page_id).await;
             let count = records.len();
@@ -322,11 +361,7 @@ impl SurrealOutput {
 
         progress.lock().unwrap().finish();
         monitor.report();
-        println!(
-            "Chunks inserted: {}",
-            total_inserted.load(std::sync::atomic::Ordering::Relaxed)
-        );
-        Ok(())
+        Ok(total_inserted.load(std::sync::atomic::Ordering::Relaxed))
     }
 }
 

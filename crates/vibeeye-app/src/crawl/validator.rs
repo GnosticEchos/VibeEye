@@ -39,46 +39,55 @@ impl PageValidator {
     /// Validate a captured page. Returns `Ok(())` if the page passes all checks,
     /// or `Err(reason)` describing the first failure.
     pub fn validate(&self, capture: &PageCapture) -> Result<(), String> {
-        // 1. HTTP status code check
         if let Some(status) = capture.http_status {
-            if self.reject_4xx && (400..500).contains(&status) {
-                return Err(format!("HTTP {status}"));
-            }
-            if self.reject_5xx && status >= 500 {
-                return Err(format!("HTTP {status}"));
-            }
+            self.check_http_status(status)?;
         }
-
-        // 2. Soft-404 detection via title
         if let Some(ref title) = capture.title {
-            let lower = title.to_lowercase();
-            for pat in &self.soft_404_patterns {
-                if lower.contains(pat) {
-                    return Err(format!("soft 404 (title contains \"{pat}\")"));
-                }
+            self.check_soft_404(title)?;
+        }
+        self.check_content_length(capture.html.len())?;
+        self.check_robots_noindex(&capture.html)?;
+        Ok(())
+    }
+
+    fn check_http_status(&self, status: u16) -> Result<(), String> {
+        if self.reject_4xx && (400..500).contains(&status) {
+            return Err(format!("HTTP {status}"));
+        }
+        if self.reject_5xx && status >= 500 {
+            return Err(format!("HTTP {status}"));
+        }
+        Ok(())
+    }
+
+    fn check_soft_404(&self, title: &str) -> Result<(), String> {
+        let lower = title.to_lowercase();
+        for pat in &self.soft_404_patterns {
+            if lower.contains(pat) {
+                return Err(format!("soft 404 (title contains \"{pat}\")"));
             }
         }
+        Ok(())
+    }
 
-        // 3. Content length check
-        let text_len = capture.html.len();
-        if text_len < self.min_content_length {
+    fn check_content_length(&self, len: usize) -> Result<(), String> {
+        if len < self.min_content_length {
             return Err(format!(
-                "content too short ({text_len} chars, min {})",
+                "content too short ({len} chars, min {})",
                 self.min_content_length
             ));
         }
+        Ok(())
+    }
 
-        // 4. Robots noindex check
-        if self.check_robots_noindex {
-            let lower = capture.html.to_lowercase();
-            if lower.contains("noindex") {
-                // Narrow check: look for meta robots tag
-                if lower.contains("<meta") && lower.contains("robots") {
-                    return Err("robots noindex".to_string());
-                }
-            }
+    fn check_robots_noindex(&self, html: &str) -> Result<(), String> {
+        if !self.check_robots_noindex {
+            return Ok(());
         }
-
+        let lower = html.to_lowercase();
+        if lower.contains("noindex") && lower.contains("<meta") && lower.contains("robots") {
+            return Err("robots noindex".to_string());
+        }
         Ok(())
     }
 }

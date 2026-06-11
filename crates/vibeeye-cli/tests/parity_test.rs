@@ -9,10 +9,8 @@ use std::collections::HashMap;
 fn cli_help_tree_matches_tool_registry() {
     // --- CLI side ---
     let opts = vibeeye_cli::help_tree::HelpTreeOpts {
-        depth_limit: None,
-        ignore: vec![],
-        tree_all: false,
         output: vibeeye_cli::help_tree::HelpTreeOutputFormat::Json,
+        ..Default::default()
     };
     let cli_json =
         vibeeye_cli::help_tree::generate_json_for_path::<vibeeye_cli::cli::Cli>(&opts, &[])
