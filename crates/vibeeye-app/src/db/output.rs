@@ -197,7 +197,11 @@ impl SurrealOutput {
             .chunks(EMBED_BATCH_SIZE)
             .map(|chunk| chunk.to_vec())
             .collect();
-        eprintln!("DEBUG: {} entries -> {} batches", all_entries.len(), batches.len());
+        eprintln!(
+            "DEBUG: {} entries -> {} batches",
+            all_entries.len(),
+            batches.len()
+        );
 
         let group = self.group.clone();
         let model = config.model.clone();
@@ -247,7 +251,11 @@ impl SurrealOutput {
                     .collect();
 
                 progress.lock().unwrap().inc(records.len() as u64);
-                eprintln!("DEBUG: batch {} produced {} records", batch_idx, records.len());
+                eprintln!(
+                    "DEBUG: batch {} produced {} records",
+                    batch_idx,
+                    records.len()
+                );
                 records
             });
         }
@@ -260,7 +268,11 @@ impl SurrealOutput {
             task_count += 1;
             match task_result {
                 Ok(records) => {
-                    eprintln!("DEBUG: join_next returned {} records (task {})", records.len(), task_count);
+                    eprintln!(
+                        "DEBUG: join_next returned {} records (task {})",
+                        records.len(),
+                        task_count
+                    );
                     all_records.extend(records);
                 }
                 Err(e) => {
@@ -272,7 +284,11 @@ impl SurrealOutput {
                 last_report = std::time::Instant::now();
             }
         }
-        eprintln!("DEBUG: collected {} records from {} tasks", all_records.len(), task_count);
+        eprintln!(
+            "DEBUG: collected {} records from {} tasks",
+            all_records.len(),
+            task_count
+        );
 
         #[allow(clippy::mutable_key_type)]
         let mut by_page: HashMap<RecordId, Vec<crate::db::models::ChunkRecord>> = HashMap::new();
@@ -293,7 +309,10 @@ impl SurrealOutput {
                 }
                 Err(e) => {
                     failed_pages += 1;
-                    eprintln!("WARN: failed to insert {} chunks for page {:?}: {}", count, page_id, e);
+                    eprintln!(
+                        "WARN: failed to insert {} chunks for page {:?}: {}",
+                        count, page_id, e
+                    );
                 }
             }
         }

@@ -113,10 +113,8 @@ impl EmbeddingProvider {
                             return Ok(embeddings);
                         }
                         Err(e) => {
-                            last_err = Some(anyhow::anyhow!(
-                                "failed to parse embedding response: {}",
-                                e
-                            ));
+                            last_err =
+                                Some(anyhow::anyhow!("failed to parse embedding response: {}", e));
                             continue;
                         }
                     }
