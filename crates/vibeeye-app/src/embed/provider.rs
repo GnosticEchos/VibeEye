@@ -81,10 +81,7 @@ impl EmbeddingProvider {
         for attempt in 0..=3 {
             if attempt > 0 {
                 let delay = std::time::Duration::from_secs(5 * (1 << (attempt - 1)));
-                eprintln!(
-                    "WARN: embedding batch retry {}/3 after {:?}",
-                    attempt, delay
-                );
+                tracing::warn!(attempt, ?delay, "embedding batch retry");
                 tokio::time::sleep(delay).await;
             }
 

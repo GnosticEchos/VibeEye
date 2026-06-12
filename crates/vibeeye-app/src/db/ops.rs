@@ -548,9 +548,13 @@ impl DbClient {
         limit: usize,
         page_urls: Option<Vec<String>>,
     ) -> Result<Vec<serde_json::Value>> {
+        let dimension = embedding.len() as i32;
         let (sql, group_bind, page_urls_bind) =
-            Self::build_vector_query(group, embedding, limit, page_urls);
-        let mut q = self.query(sql).bind(("embedding", embedding.to_vec()));
+            Self::build_vector_query(group, limit, page_urls);
+        let mut q = self
+            .query(sql)
+            .bind(("embedding", embedding.to_vec()))
+            .bind(("dimension", dimension));
         if let Some(g) = group_bind {
             q = q.bind(("group", g));
         }
@@ -564,7 +568,6 @@ impl DbClient {
 
     fn build_vector_query(
         group: Option<&str>,
-        _embedding: &[f32],
         limit: usize,
         page_urls: Option<Vec<String>>,
     ) -> (String, Option<String>, Option<Vec<String>>) {
@@ -573,7 +576,7 @@ impl DbClient {
         } else {
             "score"
         };
-        let mut conditions = vec!["true"];
+        let mut conditions = vec!["dimensions = $dimension"];
         if group.is_some() {
             conditions.push("group = $group");
         }

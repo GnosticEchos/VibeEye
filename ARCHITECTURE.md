@@ -45,13 +45,14 @@ flowchart TB
 
 ---
 
-## 2. Crawl Pipeline - Logic Flow
+## 2. Crawl Pipeline — Logic Flow
 
 ```mermaid
 flowchart TD
     Start([URL + CrawlOptions]) --> Navigate[BrowserSession::navigate]
 
     Navigate --> LoadComplete{webview.load_status == Complete}
+
     LoadComplete -->|Timeout| ExtractAnyway[Proceed with partial]
     LoadComplete -->|Success| JsDetect{HTML contains script tag}
 
@@ -82,7 +83,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph CrawlPhase["During Crawl"]
-        A1[Page loads JS writes to IDB] --> A2[Page settles]
+        A1[Page loads<br/>JS writes to IDB] --> A2[Page settles]
     end
 
     subgraph ExtractPhase["Post-Settle Extraction"]
@@ -98,21 +99,137 @@ flowchart LR
 
 ---
 
-## 4. CLI / MCP Responsibility Matrix
+## 4. Workspace Layer Diagram
 
-| Capability | MCP Tool | CLI Command | Reason |
-|---|---|---|---|
-| Basic crawl (no auth) | crawl(url) | vibe-eye crawl url | Both supported |
-| SPA with heavy JS | crawl(url) - auto-handled | vibe-eye crawl url | Engine auto-detects |
-| Auth required | NOT SUPPORTED - returns needs_cli | vibe-eye crawl --auth | Security |
-| Large crawl > 100 pages | crawl(url) with warning | vibe-eye crawl --max-pages | Override in CLI |
-| Custom extraction | crawl(url) basic | vibe-eye crawl --format --selector | Power user |
-| DB destructive ops | NOT SUPPORTED | vibe-eye db reset | Too dangerous |
-| DevTools diagnostics | NOT SUPPORTED | VIBEYE_DEVTOOLS=1 vibe-eye crawl | External tools |
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    vibeeye-core (domain types)                    │
+│  Viewport │ BrowserContext │ NavigationState │ RenderedBuffer    │
+│  ContentFormat │ VibeError │ Result<T>                          │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │ depends on
+┌──────────────────────▼───────────────────────────────────────────┐
+│                    vibeeye-app (core library)                     │
+│                                                                   │
+│  ┌─────────────┐  ┌────────────┐  ┌───────────┐  ┌───────────┐  │
+│  │  browser/   │  │   crawl/   │  │extraction/│  │    db/    │  │
+│  │  mod.rs     │  │  mod.rs    │  │  mod.rs   │  │  client   │  │
+│  │  engine.rs  │  │  links.rs  │  │  dom.rs   │  │  schema   │  │
+│  │ navigation  │  │  output.rs │  │markdown.rs│  │  ops.rs   │  │
+│  │             │  │ validator  │  │           │  │  output   │  │
+│  │             │  │  robots.rs │  │           │  │  import   │  │
+│  │             │  │ sitemap.rs │  │           │  │  export   │  │
+│  └─────────────┘  └────────────┘  └───────────┘  └───────────┘  │
+│                                                                   │
+│  ┌─────────────┐  ┌────────────┐  ┌───────────┐  ┌───────────┐  │
+│  │  chunk/     │  │  embed/    │  │  config/  │  │  tools/   │  │
+│  │  mod.rs     │  │ provider.rs│  │  crawl.rs │  │  browse   │  │
+│  │             │  │            │  │embeddings │  │  extract  │  │
+│  │             │  │            │  │           │  │  snapshot │  │
+│  └─────────────┘  └────────────┘  └───────────┘  └───────────┘  │
+└──────────────────────┬───────────────────────────────────────────┘
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+┌──────────────────┐   ┌────────────────────────┐
+│  vibeeye-cli     │   │   vibeeye-mcp          │
+│  (vibe-eye bin)  │   │   (MCP stdio server)   │
+│                  │   │                        │
+│  cli.rs          │   │  main.rs               │
+│  commands.rs     │   │  handler.rs            │
+│  format.rs       │   │  tools.rs              │
+│  help_tree/      │   │                        │
+└──────────────────┘   └────────────────────────┘
+```
 
 ---
 
-## 5. MCP Tool Return Contract
+
+## 5. Thin UI Design Pattern
+
+Both the CLI (`vibeeye-cli`) and the MCP server (`vibeeye-mcp`) are **thin wrappers**
+around the same shared library (`vibeeye-app`). Every capability is implemented
+exactly once as a `Tool` trait impl in `vibeeye-app`, then consumed by both UIs:
+
+```
+                      ┌──────────────────────────────┐
+                      │     vibeeye-app (shared)     │
+                      │  Tool trait implementations  │
+                      │  BrowseTool | SnapshotTool   │
+                      │  ExtractTool | crawl::run    │
+                      │  db::DbClient | Chunker      │
+                      │  EmbeddingProvider           │
+                      └──────────────┬───────────────┘
+                                     │ imports
+                           ┌─────────┴─────────┐
+                           ▼                   ▼
+                ┌──────────────────┐   ┌──────────────────┐
+                │   vibeeye-cli    │   │   vibeeye-mcp    │
+                │  (vibe-eye bin)  │   │  (MCP stdio svr) │
+                │                  │   │                  │
+                │  help-tree JSON  │   │  MCP tools/list  │
+                │  <- ToolRegistry │   │  <- ToolRegistry  │
+                └──────────────────┘   └──────────────────┘
+```
+
+### Interface parity
+
+The shared `ToolRegistry` in `vibeeye-app` powers both the CLI's `--help-tree`
+introspection and the MCP server's `tools/list` response. A dedicated
+[`parity_test`](crates/vibeeye-cli/tests/parity_test.rs) verifies they stay in sync:
+
+```rust
+// Verifies that --help-tree -f json exposes the same tools as MCP tools/list
+fn cli_help_tree_matches_tool_registry() { ... }
+```
+
+### Benefits
+
+- **Single code path.** Bug fixes and features land in `vibeeye-app` and are
+  immediately available from both the terminal and AI agent hosts.
+- **Consistent capabilities.** Users get the same tools whether they type commands
+  or an agent calls MCP tools.
+- **Feature gates propagate.** The `surrealdb` and `embeddings` Cargo features gate
+  the same code regardless of which UI is in use.
+
+## 6. Feature Gates
+
+| Feature | What it enables | Deps pulled in |
+|---------|----------------|----------------|
+| *(default)* | Browser tools (navigate, snapshot, extract), crawl to stdout/dir | Servo, scraper |
+| `surrealdb` | SurrealDB persistence, DB search, crawl/batch --surrealdb, import/export, MCP DB tools | surrealdb |
+| `embeddings` | Chunking, embedding, vector + hybrid search, MCP vector/hybrid tools | tokenizers, reqwest + `surrealdb` |
+
+Build combinations:
+
+```bash
+# Minimal (no DB, no embeddings) — everything works except DB persistence
+cargo build --release
+
+# With SurrealDB — crawl + persist + search
+cargo build --release --features surrealdb
+
+# Full pipeline — crawl → chunk → embed → hybrid search
+cargo build --release --features "surrealdb embeddings"
+```
+
+---
+
+## 7. CLI / MCP Responsibility Matrix
+
+| Capability | MCP Tool | CLI Command | Reason |
+|---|---|---|---|
+| Basic crawl (no auth) | `crawl(url)` | `vibe-eye crawl url` | Both supported |
+| SPA with heavy JS | `crawl(url)` — auto-handled | `vibe-eye crawl url` | Engine auto-detects |
+| Auth required | NOT SUPPORTED — returns `NeedsCli` | `vibe-eye crawl --auth` | Security |
+| Large crawl > 100 pages | `crawl(url)` with warning | `vibe-eye crawl --max-pages` | Override in CLI |
+| Custom extraction | `crawl(url)` basic | `vibe-eye crawl --format --selector` | Power user |
+| DB destructive ops | NOT SUPPORTED | `vibe-eye db reset` | Too dangerous |
+| DevTools diagnostics | NOT SUPPORTED | `VIBEYE_DEVTOOLS=1 vibe-eye crawl` | External tools |
+
+---
+
+## 8. MCP Tool Return Contract
 
 When a crawl requires user judgment:
 
@@ -139,121 +256,131 @@ pub enum CrawlStatus {
 ```
 
 **MCP tool description:**
-> The crawl tool fetches and extracts content from web pages. It automatically handles JavaScript-rendered pages (SPAs like crates.io). If the page requires authentication or the crawl would be large (>100 pages), the tool will return a status indicating you should prompt the user to run the CLI command: vibe-eye crawl <url> --auth
+> The crawl tool fetches and extracts content from web pages. It automatically handles JavaScript-rendered pages (SPAs like crates.io). If the page requires authentication or the crawl would be large (>100 pages), the tool will return a status indicating you should prompt the user to run the CLI command: `vibe-eye crawl <url> --auth`
 
 ---
 
-## 6. Module Changes
+## 9. Database Schema
 
-### 6.1 browser/engine.rs
+### Tables
 
-| Lines | Change |
-|---|---|
-| 22-35 | Add EvalJs and GetDomLinks to EngineCommand enum |
-| 220-253 | Add eval_js_cmd and get_dom_links_cmd handlers |
-| 156-215 | Start DevTools server if VIBEYE_DEVTOOLS env var set |
+**`page`** (SCHEMAFULL)
 
-### 6.2 browser/mod.rs
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `record<page>` | SurrealDB record ID |
+| `group` | `string` | Crawl group (sanitized domain) |
+| `url` | `string` | Page URL |
+| `title` | `option<string>` | Page title |
+| `content` | `string` | Extracted content |
+| `format` | `string` | Content format (markdown/html/text) |
+| `depth` | `int` | BFS depth from seed |
+| `crawled_at` | `datetime` | Crawl timestamp |
+| `meta` | `object` (FLEXIBLE) | JSON-LD, Open Graph, etc. |
 
-| Lines | Change |
-|---|---|
-| 96-114 | Add eval_js method |
-| 115-132 | Add get_dom_links method |
+Full-text index: BM25 on `content` with custom analyzer (`doc_analyzer`: BLANK+CLASS+CAMEL tokenizers, LOWERCASE+SNOWBALL filters).
 
-### 6.3 crawl/mod.rs
+**`discovered`** (RELATION)
 
-| Lines | Change |
-|---|---|
-| 31-44 | Add settle_ms to CrawlOptions (default 2000) |
-| 211-240 | Add post-load settle loop in fetch_with_session |
-| 282-297 | Auto-detect SPA, use DOM links when needed |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `record<discovered>` | SurrealDB record ID |
+| `in` | `record<page>` | Source page |
+| `out` | `record<page>` | Target page |
+| `group` | `string` | Crawl group |
+| `anchor_text` | `option<string>` | Link anchor text |
+| `discovered_at` | `datetime` | Discovery timestamp |
 
-### 6.4 extraction/mod.rs
+**`chunk`**
 
-| Lines | Change |
-|---|---|
-| 14-27 | Expand NOISE_SELECTORS |
-| 47-54 | Add extract_structured for JSON-LD / Open Graph |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `record<chunk>` | SurrealDB record ID |
+| `group` | `string` | Crawl group |
+| `page` | `record<page>` | Parent page |
+| `chunk_index` | `int` | Position in page |
+| `chunk_text` | `string` | Chunk content |
+| `heading_path` | `array` | Section hierarchy (e.g., `["Intro", "API"]`) |
+| `embedding` | `vector` | Vector embedding |
+| `model` | `string` | Embedding model name |
+| `dimensions` | `int` | Embedding dimension |
 
-### 6.5 db/ops.rs
+Indexes: `idx_chunk_group`, `idx_chunk_page_index`, HNSW on `embedding` (DIST COSINE, TYPE F32, EFC 150, M 12).
 
-| Lines | Change |
-|---|---|
-| 155-166 | Add update_page_meta method |
+**`db_metadata`**
 
-### 6.6 db/schema.rs
+Key-value store for schema version tracking and other metadata.
 
-| Change |
-|---|---|
-| Add meta field to page table schema |
+### Migrations
 
-### 6.7 vibeeye-mcp/tools.rs
-
-| Change |
-|---|---|
-| Update crawl tool description with prompt-user guidance |
-| Return CrawlStatus enum in results |
-
----
-
-## 7. Implementation Checklist
-
-### Phase 1: Engine Commands ✅
-1. [x] Add EvalJs to EngineCommand
-2. [x] Add GetDomLinks to EngineCommand
-3. [x] Implement eval_js_cmd handler
-4. [x] Implement get_dom_links_cmd handler
-
-### Phase 2: BrowserSession API ✅
-5. [x] Add eval_js method to BrowserSession
-6. [x] Add get_dom_links method to BrowserSession
-
-### Phase 3: Crawl Auto-Detection ✅
-7. [x] Add settle_ms to CrawlOptions
-8. [x] Detect script tags in initial HTML
-9. [x] Implement scroll-settle loop
-10. [x] Compare raw vs DOM link counts
-11. [x] Use DOM links when appropriate
-
-### Phase 4: Structured Metadata (partial)
-12. [x] Add meta field to CrawlResult
-13. [x] Implement JSON-LD extraction (via eval_js on settled DOM)
-14. [x] Implement Open Graph extraction (via eval_js + html-to-markdown-rs)
-15. [ ] Add IndexedDB dump script
-
-### Phase 5: SurrealDB Schema ✅
-16. [x] Update page table schema with meta field
-17. [x] Add update_page_meta to DbClient
-
-### Phase 6: MCP Tool Contract ✅
-18. [x] Update crawl tool description (fixed inaccurate --auth reference)
-19. [x] Enrich crawl tool return value with derived group name and query hint
-
-### Phase 7: DevTools Integration ✅
-20. [x] Add VIBEYE_DEVTOOLS env var check
-21. [x] Configure DevTools on random port
-22. [x] Add --devtools CLI flag
-
-### Phase 8: Testing ✅
-23. [x] Test crates.io crawl — 5 pages, 93 chunks, hybrid search finds crate metadata
-24. [x] Test GitHub repo crawl — 5 pages stored but 0 chunks (anti-bot/JS-gated content)
-25. [x] Verify doc.servo.org crawl — 990 pages, 7603 chunks, hybrid search quality good
-26. [x] Verify hybrid search still works — MCP tool parity confirmed with CLI
+| Migration | Description |
+|-----------|-------------|
+| `001_initial` | Create `page` + `discovered` + BM25 index + `doc_analyzer` |
+| `002_add_chunks` | Create `chunk` + `db_metadata` + chunk indexes |
+| `003_add_meta` | Add `meta FLEXIBLE` field to `page` table |
 
 ---
 
-## 8. Remaining Work
+## 10. Key Architectural Patterns
 
-### 8.1 IndexedDB Dump (Phase 4 — deferred)
-After page settles, enumerate IndexedDB databases via `eval_js`, dump stores
-as JSON, and attach to `CrawlResult.meta.idb_data`. **Deferred** because
-`eval_js` is synchronous while IDB operations are Promise-based, requiring
-either async JS evaluation support or complex polling in Servo.
+### Process-wide Servo singleton
+
+Only one Servo engine instance exists per process lifetime. Sessions borrow-and-return via `Option::take()`:
+
+```rust
+static GLOBAL_ENGINE: OnceLock<Mutex<Option<ServoEngine>>>;
+
+// BrowserSession::new() — takes engine from pool
+// BrowserSession::drop() — returns engine to pool
+```
+
+### Dedicated engine thread
+
+Servo runs on `std::thread::Builder::new().name("servo-engine")` with a command-channel pattern:
+
+```rust
+loop {
+    servo.spin_event_loop();
+    if let Ok(cmd) = rx.try_recv() {
+        handle_command(cmd, &mut servo, &mut webview);
+    }
+}
+```
+
+All interactions via `mpsc::Sender<EngineCommand>` / `oneshot::Receiver`.
+
+### SPA auto-detection
+
+Compares count of `<a href>` in raw HTML vs live DOM. Decision:
+
+```
+DOM links > 2× raw links AND DOM links > 5  → Use DOM links (SPA)
+Otherwise                                      → Use raw HTML links (static)
+```
+
+### Two-phase hybrid search
+
+1. BM25 pre-filter across all chunks → candidate page pool
+2. KNN vector search restricted to candidate pages' chunks
+3. Adjacent-chunk context expansion around top results
+
+### Hierarchical config merge
+
+`CrawlConfig` merges profiles in order: `global` → `domain."example.com"` → `subdomain."docs.example.com"`. Each level overrides the previous.
+
+---
+
+## 11. Remaining Work
+
+### 10.1 IndexedDB Dump
+
+After page settles, enumerate IndexedDB databases via `eval_js`, dump stores as JSON, and attach to `CrawlResult.meta.idb_data`. **Deferred** because `eval_js` is synchronous while IDB operations are Promise-based, requiring either async JS evaluation support or complex polling in Servo.
+
 - Files: `crates/vibeeye-app/src/crawl/mod.rs`, `crates/vibeeye-app/src/extraction/`
 
-### 8.2 End-to-End Testing (Phase 8) ✅
-All tests completed:
-- crates.io (SPA with JS rendering) — 5 pages, 93 chunks, search works
-- GitHub repo (mixed static + JS) — 5 pages stored but 0 chunks (anti-bot)
-- doc.servo.org (regression check) — 990 pages, 7603 chunks, quality good
-- Hybrid search quality — MCP tool parity confirmed with CLI
+### 10.2 Known Issues
+
+See [`known_issues.md`](known_issues.md) for:
+- SurrealDB docs crawl misses sub-pages (Astro SPA)
+- GitHub anti-bot blocking (0 chunks expected)
+- Servo SpiderMonkey segfault on normal exit (mitigated via `libc::_exit(0)`)

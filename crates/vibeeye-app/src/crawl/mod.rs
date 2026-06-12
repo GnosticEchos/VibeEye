@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::sync::Semaphore;
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, warn};
 use url::Url;
 use vibeeye_core::ContentFormat;
 
@@ -318,7 +318,7 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
         .map_err(|e| crate::AppError::Browser(e.to_string()))?;
 
     if html.to_lowercase().contains("<script") {
-        html = settle_and_recapture(session, settle_ms).await?;
+        html = session.settle_and_get_html(settle_ms).await?;
     }
 
     // Capture localStorage snapshot
@@ -348,38 +348,6 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
         http_status: Some(status_num),
         local_storage,
     })
-}
-
-async fn settle_and_recapture(session: &mut BrowserSession, settle_ms: u64) -> Result<String> {
-    debug!("SPA detected, running settle loop");
-    let max_iterations = 3;
-    let sleep_per_iteration = Duration::from_millis(settle_ms.max(1) / max_iterations);
-
-    for i in 0..max_iterations {
-        let before = session
-            .eval_js("document.body ? document.body.scrollHeight : 0")
-            .await
-            .unwrap_or_else(|_| "0".to_string());
-        session
-            .eval_js("window.scrollTo(0, document.body.scrollHeight)")
-            .await
-            .ok();
-        tokio::time::sleep(sleep_per_iteration).await;
-        let after = session
-            .eval_js("document.body ? document.body.scrollHeight : 0")
-            .await
-            .unwrap_or_else(|_| "0".to_string());
-
-        if before == after {
-            trace!(iteration = i, "DOM stable after settle");
-            break;
-        }
-    }
-
-    session
-        .get_html()
-        .await
-        .map_err(|e| crate::AppError::Browser(e.to_string()))
 }
 
 fn error_result(

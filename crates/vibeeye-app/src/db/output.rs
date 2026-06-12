@@ -227,10 +227,10 @@ impl SurrealOutput {
             .chunks(EMBED_BATCH_SIZE)
             .map(|chunk| chunk.to_vec())
             .collect();
-        eprintln!(
-            "DEBUG: {} entries -> {} batches",
+        tracing::debug!(
             total_chunks,
-            batches.len()
+            batch_count = batches.len(),
+            "embedding batches prepared"
         );
 
         let group = group.to_string();
@@ -255,7 +255,7 @@ impl SurrealOutput {
                     }
                     Err(e) => {
                         monitor.record_error();
-                        eprintln!("WARN: embedding batch {} failed: {}", batch_idx, e);
+                        tracing::warn!(batch_idx, error = %e, "embedding batch failed");
                         return Vec::new();
                     }
                 };
@@ -281,10 +281,10 @@ impl SurrealOutput {
                     .collect();
 
                 progress.lock().unwrap().inc(records.len() as u64);
-                eprintln!(
-                    "DEBUG: batch {} produced {} records",
+                tracing::debug!(
                     batch_idx,
-                    records.len()
+                    record_count = records.len(),
+                    "embedding batch completed"
                 );
                 records
             });
@@ -297,15 +297,15 @@ impl SurrealOutput {
             task_count += 1;
             match task_result {
                 Ok(records) => {
-                    eprintln!(
-                        "DEBUG: join_next returned {} records (task {})",
-                        records.len(),
-                        task_count
+                    tracing::debug!(
+                        record_count = records.len(),
+                        task_count,
+                        "embedding task returned records"
                     );
                     all_records.extend(records);
                 }
                 Err(e) => {
-                    eprintln!("WARN: embedding task {} panicked: {}", task_count, e);
+                    tracing::warn!(task_count, error = %e, "embedding task panicked");
                 }
             }
             if last_report.elapsed().as_secs() >= 30 {
@@ -313,10 +313,10 @@ impl SurrealOutput {
                 last_report = std::time::Instant::now();
             }
         }
-        eprintln!(
-            "DEBUG: collected {} records from {} tasks",
-            all_records.len(),
-            task_count
+        tracing::debug!(
+            record_count = all_records.len(),
+            task_count,
+            "all embedding tasks collected"
         );
 
         (all_records, monitor, progress)
@@ -333,30 +333,32 @@ impl SurrealOutput {
         for record in records {
             by_page.entry(record.page.clone()).or_default().push(record);
         }
-        eprintln!("DEBUG: grouped into {} pages", by_page.len());
+        tracing::debug!(page_count = by_page.len(), "chunk records grouped by page");
 
         let mut failed_pages = 0;
         let total_inserted = std::sync::atomic::AtomicUsize::new(0);
         for (page_id, records) in by_page {
             let _ = self.client.delete_chunks_for_page(&page_id).await;
             let count = records.len();
-            eprintln!("DEBUG: inserting {} chunks for page {:?}", count, page_id);
+            tracing::debug!(chunk_count = count, ?page_id, "inserting chunks for page");
             match self.client.insert_chunks(&records).await {
                 Ok(()) => {
                     total_inserted.fetch_add(count, std::sync::atomic::Ordering::Relaxed);
-                    eprintln!("DEBUG: inserted {} chunks OK", count);
+                    tracing::debug!(chunk_count = count, "chunks inserted successfully");
                 }
                 Err(e) => {
                     failed_pages += 1;
-                    eprintln!(
-                        "WARN: failed to insert {} chunks for page {:?}: {}",
-                        count, page_id, e
+                    tracing::warn!(
+                        chunk_count = count,
+                        ?page_id,
+                        error = %e,
+                        "chunk insertion failed"
                     );
                 }
             }
         }
         if failed_pages > 0 {
-            eprintln!("WARN: {} pages failed chunk insertion", failed_pages);
+            tracing::warn!(failed_pages, "pages failed chunk insertion");
         }
 
         progress.lock().unwrap().finish();

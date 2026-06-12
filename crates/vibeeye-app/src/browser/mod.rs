@@ -3,6 +3,7 @@
 //! Thin wrapper around Servo 0.1.0 for headless rendering.
 
 use crate::Result;
+use tracing::{debug, trace};
 use vibeeye_core::NavigationState;
 
 pub mod engine;
@@ -175,6 +176,39 @@ impl BrowserSession {
                 "Browser engine unavailable".to_string(),
             ))
         }
+    }
+
+    /// Run a settle loop for SPA content, then return the final HTML.
+    ///
+    /// Scrolls the page and waits for DOM stability before capturing.
+    pub async fn settle_and_get_html(&self, settle_ms: u64) -> Result<String> {
+        debug!("SPA detected, running settle loop");
+        let max_iterations = 3;
+        let sleep_per_iteration = std::time::Duration::from_millis(settle_ms.max(1) / max_iterations);
+
+        for i in 0..max_iterations {
+            let before = self
+                .eval_js("document.body ? document.body.scrollHeight : 0")
+                .await
+                .unwrap_or_else(|_| "0".to_string());
+            self.eval_js("window.scrollTo(0, document.body.scrollHeight)")
+                .await
+                .ok();
+            tokio::time::sleep(sleep_per_iteration).await;
+            let after = self
+                .eval_js("document.body ? document.body.scrollHeight : 0")
+                .await
+                .unwrap_or_else(|_| "0".to_string());
+
+            if before == after {
+                trace!(iteration = i, "DOM stable after settle");
+                break;
+            }
+        }
+
+        self.get_html()
+            .await
+            .map_err(|e| crate::AppError::Browser(e.to_string()))
     }
 
     /// Close the browser session, returning the engine to the global pool.

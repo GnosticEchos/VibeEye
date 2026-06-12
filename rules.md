@@ -1,8 +1,8 @@
 # Development Guidelines: VibeEye
 
 ## Project Overview
-A Rust-native browser tool for sovereign ingestion using Servo 0.1.0. 
-**Tech Stack**: Rust 1.80+, Servo 0.1.0, Clap 4.5.
+A Rust-native headless browser for agentic content extraction using Servo.
+**Tech Stack**: Rust 1.86+, Servo 0.1.0, Clap 4.5, Tokio 1.45, SurrealDB 3.1.
 
 ## Architectural Mandates
 - **Thin Interface**: Separate the core browser engine (`src/browser/`) from interface handlers (`src/cli/`, `src/mcp/`).
@@ -17,6 +17,11 @@ A Rust-native browser tool for sovereign ingestion using Servo 0.1.0.
 - **Quality Gate**: Every commit MUST pass `cargo fmt --check`, `cargo clippy -- -D warnings`, and `cargo test`.
 - **Memory Constraint**: Active page loads MUST NOT exceed 500MB RAM.
 - **Exit Strategy**: All missions must end with a clean process exit and exit code 0.
+
+## Feature Gating
+- **surrealdb feature**: All database operations (persistence, search, import/export).
+- **embeddings feature**: Semantic chunking, embedding generation, vector/hybrid search (implies surrealdb).
+- Default build (no features) — browser tools + crawl to stdout/directory work without external dependencies.
 
 ## Prohibitions
 - **NO Chromium**: Do not introduce any WebKit/Chromium-based libraries (Playwright, Puppeteer).

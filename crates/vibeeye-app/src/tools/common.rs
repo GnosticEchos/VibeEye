@@ -47,10 +47,17 @@ pub async fn navigate_and_capture(url: &str) -> Result<PageCapture> {
         .await
         .map_err(|e| AppError::Navigation(e.to_string()))?;
 
-    let html = session
+    let mut html = session
         .get_html()
         .await
         .map_err(|e| AppError::Browser(e.to_string()))?;
+
+    if html.to_lowercase().contains("<script") {
+        html = session
+            .settle_and_get_html(2000)
+            .await
+            .map_err(|e| AppError::Browser(e.to_string()))?;
+    }
 
     let title = crate::extraction::extract_title(&html);
 
