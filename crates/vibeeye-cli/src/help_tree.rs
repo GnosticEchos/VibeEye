@@ -86,86 +86,150 @@ pub fn parse_help_tree_invocation(argv: &[String]) -> Result<Option<HelpTreeInvo
     Ok(Some(state.into_invocation()))
 }
 
-/// Process a single argv token and any following value tokens.
-/// Returns the index of the last consumed token.
+type FlagHandler =
+    fn(&mut ParseState, argv: &[String], idx: usize, arg: &str) -> Result<usize, String>;
+
+static FLAG_HANDLERS: &[(&str, FlagHandler)] = &[
+    ("--help-tree", handle_help_tree),
+    ("--tree-depth", handle_tree_depth),
+    ("-L", handle_tree_depth),
+    ("--tree-ignore", handle_tree_ignore),
+    ("-I", handle_tree_ignore),
+    ("--tree-all", handle_tree_all),
+    ("-a", handle_tree_all),
+    ("--tree-output", handle_tree_output),
+    ("--tree-style", handle_tree_style),
+    ("--tree-color", handle_tree_color),
+    ("--format", handle_format),
+    ("-f", handle_format),
+];
+
 fn process_one_arg(state: &mut ParseState, argv: &[String], idx: usize) -> Result<usize, String> {
     let arg = &argv[idx];
-    match arg.as_str() {
-        "--help-tree" => {
-            state.help_tree = true;
-            Ok(idx)
-        }
-        "--tree-depth" | "-L" => {
-            parse_usize_arg(state, argv, idx, arg, |s, v| s.depth_limit = Some(v))
-        }
-        "--tree-ignore" | "-I" => parse_string_arg(state, argv, idx, arg, |s, v| s.ignore.push(v)),
-        "--tree-all" | "-a" => {
-            state.tree_all = true;
-            Ok(idx)
-        }
-        "--tree-output" => parse_tree_output_arg(state, argv, idx),
-        arg_str if arg_str == "--tree-style" || arg_str.starts_with("--tree-style=") => {
-            parse_tree_style_arg(state, argv, idx, arg)
-        }
-        arg_str if arg_str == "--tree-color" || arg_str.starts_with("--tree-color=") => {
-            parse_tree_color_arg(state, argv, idx, arg)
-        }
-        "--format" | "-f" => parse_format_arg(state, argv, idx, arg),
-        token if token.starts_with('-') => Ok(idx),
-        token => {
-            state.path.push(token.to_string());
-            Ok(idx)
-        }
+    if let Some((_, handler)) = FLAG_HANDLERS
+        .iter()
+        .find(|&&(token, _)| token == arg.as_str())
+    {
+        return handler(state, argv, idx, arg);
+    }
+    if let Some((_, handler)) = FLAG_HANDLERS.iter().find(|&&(token, _)| {
+        arg.starts_with(token) && arg.len() > token.len() && arg.as_bytes()[token.len()] == b'='
+    }) {
+        return handler(state, argv, idx, arg);
+    }
+    if arg.starts_with('-') {
+        Ok(idx)
+    } else {
+        state.path.push(arg.clone());
+        Ok(idx)
     }
 }
 
-fn parse_usize_arg(
+fn handle_help_tree(
     state: &mut ParseState,
-    argv: &[String],
+    _argv: &[String],
     idx: usize,
-    arg: &str,
-    setter: impl FnOnce(&mut ParseState, usize),
+    _arg: &str,
 ) -> Result<usize, String> {
-    let next = idx + 1;
-    let value = parse_usize(argv, next, arg)?;
-    setter(state, value);
-    Ok(next)
+    state.help_tree = true;
+    Ok(idx)
 }
 
-fn parse_string_arg(
-    state: &mut ParseState,
-    argv: &[String],
-    idx: usize,
-    arg: &str,
-    setter: impl FnOnce(&mut ParseState, String),
-) -> Result<usize, String> {
-    let next = idx + 1;
-    let value = parse_string(argv, next, arg)?;
-    setter(state, value);
-    Ok(next)
-}
-
-fn parse_tree_output_arg(
-    state: &mut ParseState,
-    argv: &[String],
-    idx: usize,
-) -> Result<usize, String> {
-    let next = idx + 1;
-    let value = parse_tree_output(argv, next)?;
-    state.output = Some(value);
-    Ok(next)
-}
-
-fn parse_format_arg(
+fn handle_tree_depth(
     state: &mut ParseState,
     argv: &[String],
     idx: usize,
     arg: &str,
 ) -> Result<usize, String> {
-    let next = idx + 1;
-    let value = parse_string(argv, next, arg)?;
+    let value = parse_usize(argv, idx + 1, arg)?;
+    state.depth_limit = Some(value);
+    Ok(idx + 1)
+}
+
+fn handle_tree_ignore(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = parse_string(argv, idx + 1, arg)?;
+    state.ignore.push(value);
+    Ok(idx + 1)
+}
+
+fn handle_tree_all(
+    state: &mut ParseState,
+    _argv: &[String],
+    idx: usize,
+    _arg: &str,
+) -> Result<usize, String> {
+    state.tree_all = true;
+    Ok(idx)
+}
+
+fn handle_tree_output(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    _arg: &str,
+) -> Result<usize, String> {
+    let value = parse_string(argv, idx + 1, "--tree-output")?;
+    state.output = Some(match value.as_str() {
+        "text" => HelpTreeOutputFormat::Text,
+        "json" => HelpTreeOutputFormat::Json,
+        _ => return Err(format!("Invalid --tree-output value: '{value}'")),
+    });
+    Ok(idx + 1)
+}
+
+fn handle_format(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = parse_string(argv, idx + 1, arg)?;
     state.output = Some(parse_format_value(value)?);
-    Ok(next)
+    Ok(idx + 1)
+}
+
+fn handle_tree_style(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = if let Some((_, v)) = arg.split_once('=') {
+        v.to_string()
+    } else {
+        parse_string(argv, idx + 1, "--tree-style")?
+    };
+    state.style = Some(match value.as_str() {
+        "plain" => HelpTreeStyle::Plain,
+        "rich" => HelpTreeStyle::Rich,
+        _ => return Err(format!("Invalid --tree-style value: '{value}'")),
+    });
+    Ok(if arg.contains('=') { idx } else { idx + 1 })
+}
+
+fn handle_tree_color(
+    state: &mut ParseState,
+    argv: &[String],
+    idx: usize,
+    arg: &str,
+) -> Result<usize, String> {
+    let value = if let Some((_, v)) = arg.split_once('=') {
+        v.to_string()
+    } else {
+        parse_string(argv, idx + 1, "--tree-color")?
+    };
+    state.color = Some(match value.as_str() {
+        "auto" => HelpTreeColor::Auto,
+        "always" => HelpTreeColor::Always,
+        "never" => HelpTreeColor::Never,
+        _ => return Err(format!("Invalid --tree-color value: '{value}'")),
+    });
+    Ok(if arg.contains('=') { idx } else { idx + 1 })
 }
 
 #[derive(Default)]
@@ -210,61 +274,11 @@ fn parse_usize(argv: &[String], idx: usize, arg: &str) -> Result<usize, String> 
         .map_err(|_| format!("Invalid value for '{arg}': {value}"))
 }
 
-fn parse_tree_output(argv: &[String], idx: usize) -> Result<HelpTreeOutputFormat, String> {
-    let value = parse_string(argv, idx, "--tree-output")?;
-    match value.as_str() {
-        "text" => Ok(HelpTreeOutputFormat::Text),
-        "json" => Ok(HelpTreeOutputFormat::Json),
-        _ => Err(format!("Invalid --tree-output value: '{value}'")),
-    }
-}
-
 fn parse_format_value(value: String) -> Result<HelpTreeOutputFormat, String> {
     match value.as_str() {
         "json" => Ok(HelpTreeOutputFormat::Json),
         _ => Err(format!("Invalid --format value: '{value}'")),
     }
-}
-
-fn parse_tree_style_arg(
-    state: &mut ParseState,
-    argv: &[String],
-    idx: usize,
-    arg: &str,
-) -> Result<usize, String> {
-    let value = if let Some((_, v)) = arg.split_once('=') {
-        v.to_string()
-    } else {
-        let next = idx + 1;
-        parse_string(argv, next, "--tree-style")?
-    };
-    state.style = Some(match value.as_str() {
-        "plain" => HelpTreeStyle::Plain,
-        "rich" => HelpTreeStyle::Rich,
-        _ => return Err(format!("Invalid --tree-style value: '{value}'")),
-    });
-    Ok(idx)
-}
-
-fn parse_tree_color_arg(
-    state: &mut ParseState,
-    argv: &[String],
-    idx: usize,
-    arg: &str,
-) -> Result<usize, String> {
-    let value = if let Some((_, v)) = arg.split_once('=') {
-        v.to_string()
-    } else {
-        let next = idx + 1;
-        parse_string(argv, next, "--tree-color")?
-    };
-    state.color = Some(match value.as_str() {
-        "auto" => HelpTreeColor::Auto,
-        "always" => HelpTreeColor::Always,
-        "never" => HelpTreeColor::Never,
-        _ => return Err(format!("Invalid --tree-color value: '{value}'")),
-    });
-    Ok(idx)
 }
 
 /// Generate the JSON help-tree for the command identified by `requested_path`.
