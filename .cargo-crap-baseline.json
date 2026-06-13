@@ -1,0 +1,3192 @@
+{
+  "$schema": "https://raw.githubusercontent.com/minikin/cargo-crap/main/schemas/report-v1.json",
+  "version": "0.2.0",
+  "entries": [
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "batch_command",
+      "line": 234,
+      "cyclomatic": 20.0,
+      "coverage": 0.0,
+      "crap": 420.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "dispatch_db",
+      "line": 122,
+      "cyclomatic": 11.0,
+      "coverage": 0.0,
+      "crap": 132.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "run",
+      "line": 29,
+      "cyclomatic": 10.0,
+      "coverage": 0.0,
+      "crap": 110.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_command",
+      "line": 543,
+      "cyclomatic": 10.0,
+      "coverage": 0.0,
+      "crap": 110.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/schema.rs",
+      "function": "ensure_hnsw_index",
+      "line": 33,
+      "cyclomatic": 9.0,
+      "coverage": 0.0,
+      "crap": 90.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "export_command",
+      "line": 503,
+      "cyclomatic": 9.0,
+      "coverage": 0.0,
+      "crap": 90.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "parse_tree_emphasis",
+      "line": 173,
+      "cyclomatic": 9.0,
+      "coverage": 0.0,
+      "crap": 90.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "run_engine",
+      "line": 187,
+      "cyclomatic": 8.0,
+      "coverage": 0.0,
+      "crap": 72.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "handle_command",
+      "line": 257,
+      "cyclomatic": 8.0,
+      "coverage": 0.0,
+      "crap": 72.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::connect",
+      "line": 22,
+      "cyclomatic": 8.0,
+      "coverage": 0.0,
+      "crap": 72.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::embed_batches",
+      "line": 205,
+      "cyclomatic": 8.0,
+      "coverage": 0.0,
+      "crap": 72.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_color",
+      "line": 215,
+      "cyclomatic": 8.0,
+      "coverage": 0.0,
+      "crap": 72.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "navigate_cmd",
+      "line": 303,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/crawl.rs",
+      "function": "CrawlConfig::load",
+      "line": 145,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/robots.rs",
+      "function": "RobotsTxt::fetch",
+      "line": 22,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "fetch_sitemap",
+      "line": 8,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::emit_results",
+      "line": 73,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "handle_complex_command",
+      "line": 39,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "crawl_command",
+      "line": 166,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "read_seed_urls",
+      "line": 327,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_style",
+      "line": 196,
+      "cyclomatic": 7.0,
+      "coverage": 0.0,
+      "crap": 56.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::insert_chunks",
+      "line": 282,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::insert_chunk_records",
+      "line": 325,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "import_output_dir",
+      "line": 88,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "process_text_file",
+      "line": 107,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "do_fetch",
+      "line": 107,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "import_command",
+      "line": 483,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "render_command_text",
+      "line": 35,
+      "cyclomatic": 6.0,
+      "coverage": 0.0,
+      "crap": 42.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/mod.rs",
+      "function": "resolve_db_url",
+      "line": 19,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/output.rs",
+      "function": "UrlListOutput::emit_results",
+      "line": 26,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::run_bm25_query",
+      "line": 428,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::run_expansion_query",
+      "line": 489,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::vector_chunk_query",
+      "line": 544,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::embed_and_index",
+      "line": 111,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::prepare_chunks",
+      "line": 136,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "EmbedMonitor::report",
+      "line": 418,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "import_text_dir",
+      "line": 132,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "hard_split",
+      "line": 207,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/main.rs",
+      "function": "main",
+      "line": 11,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "run",
+      "line": 30,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "setup_surreal_output",
+      "line": 459,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_vector",
+      "line": 612,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_hybrid",
+      "line": 630,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "parse_hex_rgb",
+      "line": 160,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/main.rs",
+      "function": "main",
+      "line": 18,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "dispatch_browser",
+      "line": 109,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_vector",
+      "line": 331,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_hybrid",
+      "line": 352,
+      "cyclomatic": 5.0,
+      "coverage": 0.0,
+      "crap": 30.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "style_text",
+      "line": 117,
+      "cyclomatic": 12.0,
+      "coverage": 52.0,
+      "crap": 27.925248,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::shutdown",
+      "line": 139,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "await_ready",
+      "line": 165,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/navigation.rs",
+      "function": "eval_js_with_timeout",
+      "line": 29,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::hybrid_search",
+      "line": 347,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::extract_hybrid_rows",
+      "line": 379,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::apply_expansions",
+      "line": 398,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::parse_bm25_rows",
+      "line": 455,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::expand_chunks",
+      "line": 472,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::build_vector_query",
+      "line": 568,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::probe_dimension",
+      "line": 184,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "EmbedMonitor::record_success",
+      "line": 391,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "import",
+      "line": 19,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "process_manifest_entry",
+      "line": 65,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "fetch_one",
+      "line": 84,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "error_result",
+      "line": 199,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/main.rs",
+      "function": "async_main",
+      "line": 44,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "resolve_content_format",
+      "line": 350,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "run_for_path",
+      "line": 315,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::handle_call_tool_request",
+      "line": 87,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_export",
+      "line": 243,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_import",
+      "line": 257,
+      "cyclomatic": 4.0,
+      "coverage": 0.0,
+      "crap": 20.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "run",
+      "line": 69,
+      "cyclomatic": 15.0,
+      "coverage": 72.85714285714285,
+      "crap": 19.499344023323623,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/mod.rs",
+      "function": "remove_nav_and_analytics_noise",
+      "line": 88,
+      "cyclomatic": 7.0,
+      "coverage": 47.61904761904761,
+      "crap": 14.042328042328048,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "build_queue",
+      "line": 173,
+      "cyclomatic": 9.0,
+      "coverage": 66.66666666666666,
+      "crap": 12.000000000000004,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::get_text",
+      "line": 130,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::settle_and_get_html",
+      "line": 184,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::new",
+      "line": 56,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::navigate",
+      "line": 83,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::get_html",
+      "line": 96,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::get_text",
+      "line": 106,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::eval_js",
+      "line": 116,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::get_dom_links",
+      "line": 129,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "get_html_cmd",
+      "line": 360,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "get_text_cmd",
+      "line": 369,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "eval_js_cmd",
+      "line": 378,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/navigation.rs",
+      "function": "wait_for_load",
+      "line": 13,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "EmbeddingConfig::endpoints",
+      "line": 57,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/schema.rs",
+      "function": "get_metadata",
+      "line": 11,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "settle_and_recapture",
+      "line": 169,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/batch.rs",
+      "function": "emit_results",
+      "line": 219,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "load_profile",
+      "line": 317,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "build_crawl_options",
+      "line": 360,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "load_embedding_config",
+      "line": 524,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "format_command_line",
+      "line": 98,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "next_tree_prefix",
+      "line": 173,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "call_navigate",
+      "line": 154,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "call_snapshot",
+      "line": 170,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "call_extract",
+      "line": 183,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_query",
+      "line": 203,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_status",
+      "line": 229,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_reset",
+      "line": 302,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "load_embedding_config",
+      "line": 392,
+      "cyclomatic": 3.0,
+      "coverage": 0.0,
+      "crap": 12.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "EmbeddingProvider::embed_batch",
+      "line": 77,
+      "cyclomatic": 11.0,
+      "coverage": 81.25,
+      "crap": 11.797607421875,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::new",
+      "line": 43,
+      "cyclomatic": 4.0,
+      "coverage": 25.0,
+      "crap": 10.75,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/export.rs",
+      "function": "export_chunks",
+      "line": 71,
+      "cyclomatic": 6.0,
+      "coverage": 50.0,
+      "crap": 10.5,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/export.rs",
+      "function": "export_pages",
+      "line": 21,
+      "cyclomatic": 6.0,
+      "coverage": 52.63157894736842,
+      "crap": 9.826213733780435,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "build_outputs",
+      "line": 415,
+      "cyclomatic": 9.0,
+      "coverage": 80.64516129032258,
+      "crap": 9.587291463864926,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "Chunker::recursive_split",
+      "line": 51,
+      "cyclomatic": 5.0,
+      "coverage": 45.0,
+      "crap": 9.159375,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/output.rs",
+      "function": "DirectoryOutput::emit_results",
+      "line": 80,
+      "cyclomatic": 4.0,
+      "coverage": 33.33333333333333,
+      "crap": 8.740740740740742,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/export.rs",
+      "function": "export_links",
+      "line": 47,
+      "cyclomatic": 6.0,
+      "coverage": 58.82352941176471,
+      "crap": 8.513331976389171,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "format_flag_line",
+      "line": 126,
+      "cyclomatic": 8.0,
+      "coverage": 96.66666666666667,
+      "crap": 8.00237037037037,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "crawl_one_page",
+      "line": 412,
+      "cyclomatic": 6.0,
+      "coverage": 62.5,
+      "crap": 7.8984375,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::validate",
+      "line": 41,
+      "cyclomatic": 7.0,
+      "coverage": 81.81818181818183,
+      "crap": 7.294515401953419,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/robots.rs",
+      "function": "parse_line",
+      "line": 75,
+      "cyclomatic": 7.0,
+      "coverage": 90.0,
+      "crap": 7.049,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/migrations/mod.rs",
+      "function": "run_all",
+      "line": 14,
+      "cyclomatic": 7.0,
+      "coverage": 95.0,
+      "crap": 7.006125,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "enqueue_discovered_links",
+      "line": 389,
+      "cyclomatic": 7.0,
+      "coverage": 95.23809523809523,
+      "crap": 7.005291005291006,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "replace_plain_vars",
+      "line": 89,
+      "cyclomatic": 7.0,
+      "coverage": 95.45454545454545,
+      "crap": 7.004601803155522,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::group_stats",
+      "line": 236,
+      "cyclomatic": 7.0,
+      "coverage": 100.0,
+      "crap": 7.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "try_split",
+      "line": 165,
+      "cyclomatic": 7.0,
+      "coverage": 100.0,
+      "crap": 7.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_cell_with_limit",
+      "line": 129,
+      "cyclomatic": 7.0,
+      "coverage": 100.0,
+      "crap": 7.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::drop",
+      "line": 223,
+      "cyclomatic": 4.0,
+      "coverage": 44.44444444444444,
+      "crap": 6.743484224965707,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "split_by_headings",
+      "line": 98,
+      "cyclomatic": 6.0,
+      "coverage": 85.29411764705883,
+      "crap": 6.114492163647466,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/common.rs",
+      "function": "navigate_and_capture",
+      "line": 38,
+      "cyclomatic": 6.0,
+      "coverage": 86.66666666666667,
+      "crap": 6.085333333333334,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "collect_subcommands",
+      "line": 461,
+      "cyclomatic": 6.0,
+      "coverage": 92.85714285714286,
+      "crap": 6.013119533527696,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/common.rs",
+      "function": "resolve_redirect_url",
+      "line": 21,
+      "cyclomatic": 6.0,
+      "coverage": 93.33333333333333,
+      "crap": 6.010666666666666,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "do_fetch",
+      "line": 286,
+      "cyclomatic": 6.0,
+      "coverage": 96.49122807017544,
+      "crap": 6.001555134373329,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "get_dom_links_cmd",
+      "line": 399,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/navigation.rs",
+      "function": "extract_html",
+      "line": 72,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/navigation.rs",
+      "function": "extract_text",
+      "line": 85,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "is_non_navigable",
+      "line": 40,
+      "cyclomatic": 6.0,
+      "coverage": 100.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/schema.rs",
+      "function": "set_metadata",
+      "line": 21,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::update_page",
+      "line": 84,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::bm25_search",
+      "line": 161,
+      "cyclomatic": 6.0,
+      "coverage": 100.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::update_page_meta",
+      "line": 208,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::delete_chunks_for_page",
+      "line": 320,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::knn_search",
+      "line": 328,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::bm25_candidates",
+      "line": 418,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::join_expansion_rows",
+      "line": 520,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "detect_format",
+      "line": 36,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "EmbeddingProvider::new",
+      "line": 54,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "EmbeddingProvider::embed_single",
+      "line": 139,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "navigate",
+      "line": 125,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "snapshot",
+      "line": 137,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "extract",
+      "line": 146,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_query",
+      "line": 599,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_table_object",
+      "line": 54,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_markdown_object",
+      "line": 100,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_list",
+      "line": 217,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_crawl",
+      "line": 275,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::call_db_reset_all",
+      "line": 315,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "load_embedding_provider",
+      "line": 383,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "tool_result",
+      "line": 410,
+      "cyclomatic": 2.0,
+      "coverage": 0.0,
+      "crap": 6.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_markdown_array",
+      "line": 74,
+      "cyclomatic": 5.0,
+      "coverage": 70.83333333333334,
+      "crap": 5.6202980324074066,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::navigate",
+      "line": 82,
+      "cyclomatic": 4.0,
+      "coverage": 55.55555555555556,
+      "crap": 5.404663923182442,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "normalize_url",
+      "line": 60,
+      "cyclomatic": 5.0,
+      "coverage": 76.47058823529412,
+      "crap": 5.325666598819459,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_table_array",
+      "line": 30,
+      "cyclomatic": 5.0,
+      "coverage": 86.36363636363636,
+      "crap": 5.0633921863260705,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/mod.rs",
+      "function": "extract",
+      "line": 60,
+      "cyclomatic": 5.0,
+      "coverage": 88.88888888888889,
+      "crap": 5.034293552812072,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::check_robots_noindex",
+      "line": 83,
+      "cyclomatic": 5.0,
+      "coverage": 90.0,
+      "crap": 5.025,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_output",
+      "line": 170,
+      "cyclomatic": 5.0,
+      "coverage": 92.3076923076923,
+      "crap": 5.011379153390988,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::insert_discovered",
+      "line": 134,
+      "cyclomatic": 5.0,
+      "coverage": 95.45454545454545,
+      "crap": 5.002347858752818,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/crawl.rs",
+      "function": "CrawlConfig::resolve",
+      "line": 170,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/robots.rs",
+      "function": "RobotsTxt::is_allowed",
+      "line": 56,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "handle_event",
+      "line": 46,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::check_http_status",
+      "line": 53,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::reset_all",
+      "line": 89,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/export.rs",
+      "function": "export_group",
+      "line": 9,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "option_to_json",
+      "line": 440,
+      "cyclomatic": 5.0,
+      "coverage": 100.0,
+      "crap": 5.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::eval_js",
+      "line": 148,
+      "cyclomatic": 3.0,
+      "coverage": 41.66666666666667,
+      "crap": 4.786458333333332,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::get_dom_links",
+      "line": 165,
+      "cyclomatic": 3.0,
+      "coverage": 41.66666666666667,
+      "crap": 4.786458333333332,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/mod.rs",
+      "function": "clean_html",
+      "line": 43,
+      "cyclomatic": 4.0,
+      "coverage": 66.66666666666666,
+      "crap": 4.5925925925925934,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "should_use_color",
+      "line": 151,
+      "cyclomatic": 4.0,
+      "coverage": 66.66666666666666,
+      "crap": 4.5925925925925934,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_markdown",
+      "line": 64,
+      "cyclomatic": 3.0,
+      "coverage": 44.44444444444444,
+      "crap": 4.5432098765432105,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::insert_page",
+      "line": 57,
+      "cyclomatic": 4.0,
+      "coverage": 71.42857142857143,
+      "crap": 4.373177842565598,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_table",
+      "line": 16,
+      "cyclomatic": 3.0,
+      "coverage": 50.0,
+      "crap": 4.125,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "fetch_with_session",
+      "line": 268,
+      "cyclomatic": 4.0,
+      "coverage": 86.66666666666667,
+      "crap": 4.037925925925926,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "resolve_link",
+      "line": 27,
+      "cyclomatic": 4.0,
+      "coverage": 90.0,
+      "crap": 4.016,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "extract_links",
+      "line": 8,
+      "cyclomatic": 4.0,
+      "coverage": 91.66666666666666,
+      "crap": 4.0092592592592595,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "replace_braced_vars",
+      "line": 72,
+      "cyclomatic": 4.0,
+      "coverage": 92.85714285714286,
+      "crap": 4.005830903790088,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "process_one_arg",
+      "line": 107,
+      "cyclomatic": 4.0,
+      "coverage": 94.11764705882352,
+      "crap": 4.003256665988195,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "parse_format",
+      "line": 81,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "format_name",
+      "line": 503,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "file_extension",
+      "line": 512,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::reset_group",
+      "line": 69,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "import_surql",
+      "line": 27,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "parse_help_tree_invocation",
+      "line": 68,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "collect_args_and_opts",
+      "line": 409,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "should_skip_arg",
+      "line": 427,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "should_skip_subcommand",
+      "line": 492,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_value",
+      "line": 8,
+      "cyclomatic": 4.0,
+      "coverage": 100.0,
+      "crap": 4.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::get_html",
+      "line": 110,
+      "cyclomatic": 3.0,
+      "coverage": 53.333333333333336,
+      "crap": 3.9146666666666667,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "acquire_permit",
+      "line": 241,
+      "cyclomatic": 3.0,
+      "coverage": 66.66666666666666,
+      "crap": 3.333333333333334,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "extract_and_build",
+      "line": 464,
+      "cyclomatic": 3.0,
+      "coverage": 66.66666666666666,
+      "crap": 3.333333333333334,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "apply_rate_limit",
+      "line": 251,
+      "cyclomatic": 3.0,
+      "coverage": 75.0,
+      "crap": 3.140625,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "parse_format_value",
+      "line": 277,
+      "cyclomatic": 3.0,
+      "coverage": 80.0,
+      "crap": 3.072,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::find_page_id",
+      "line": 66,
+      "cyclomatic": 3.0,
+      "coverage": 81.25,
+      "crap": 3.059326171875,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "extract_overlap",
+      "line": 147,
+      "cyclomatic": 3.0,
+      "coverage": 88.23529411764706,
+      "crap": 3.0146549969468754,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/crawl.rs",
+      "function": "match_domain",
+      "line": 197,
+      "cyclomatic": 3.0,
+      "coverage": 88.88888888888889,
+      "crap": 3.0123456790123457,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "find_first_term_pos",
+      "line": 8,
+      "cyclomatic": 3.0,
+      "coverage": 88.88888888888889,
+      "crap": 3.0123456790123457,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "compute_snippet_bounds",
+      "line": 19,
+      "cyclomatic": 3.0,
+      "coverage": 88.88888888888889,
+      "crap": 3.0123456790123457,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "extract_match_snippet",
+      "line": 31,
+      "cyclomatic": 3.0,
+      "coverage": 88.88888888888889,
+      "crap": 3.0123456790123457,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::execute",
+      "line": 94,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/robots.rs",
+      "function": "RobotsTxt::parse",
+      "line": 42,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "parse_sitemap",
+      "line": 30,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "try_extract_url",
+      "line": 62,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "emit_results",
+      "line": 553,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "write_manifest",
+      "line": 571,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::check_soft_404",
+      "line": 63,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::create_page",
+      "line": 104,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::list_groups",
+      "line": 223,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/migrations/mod.rs",
+      "function": "get_version",
+      "line": 41,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_format",
+      "line": 185,
+      "cyclomatic": 3.0,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "select_command_by_path",
+      "line": 352,
+      "cyclomatic": 2.0,
+      "coverage": 46.15384615384615,
+      "crap": 2.6244879380974058,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "load_robots",
+      "line": 210,
+      "cyclomatic": 2.0,
+      "coverage": 80.0,
+      "crap": 2.032,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "is_same_origin",
+      "line": 86,
+      "cyclomatic": 2.0,
+      "coverage": 88.88888888888889,
+      "crap": 2.0054869684499312,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "robots_blocks",
+      "line": 230,
+      "cyclomatic": 2.0,
+      "coverage": 88.88888888888889,
+      "crap": 2.0054869684499312,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "command_to_json",
+      "line": 370,
+      "cyclomatic": 2.0,
+      "coverage": 96.42857142857143,
+      "crap": 2.00018221574344,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-core/src/domain.rs",
+      "function": "Viewport::default",
+      "line": 11,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-core"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-core/src/domain.rs",
+      "function": "BrowserContext::default",
+      "line": 28,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-core"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/discovery.rs",
+      "function": "type_to_schema",
+      "line": 69,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::get_metadata",
+      "line": 45,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::list_tools",
+      "line": 50,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::has_tool",
+      "line": 55,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::description",
+      "line": 59,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::execute",
+      "line": 78,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::description",
+      "line": 58,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::execute",
+      "line": 77,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::description",
+      "line": 66,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "is_test_mode",
+      "line": 28,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::default",
+      "line": 235,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "ServoEngine::drop",
+      "line": 159,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "EventLoopWakerImpl::clone_box",
+      "line": 430,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "EventLoopWakerImpl::wake",
+      "line": 434,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "HeadlessWebViewDelegate::notify_url_changed",
+      "line": 447,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "HeadlessWebViewDelegate::notify_load_status_changed",
+      "line": 451,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "HeadlessWebViewDelegate::notify_new_frame_ready",
+      "line": 455,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/engine.rs",
+      "function": "HeadlessWebViewDelegate::notify_crashed",
+      "line": 459,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/markdown.rs",
+      "function": "html_to_markdown",
+      "line": 13,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/dom.rs",
+      "function": "extract_metadata",
+      "line": 19,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "EmbeddingConfig::resolved_api_key",
+      "line": 35,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "EmbeddingConfig::target_chunk_size",
+      "line": 40,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "EmbeddingConfig::chunk_overlap",
+      "line": 45,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "EmbeddingConfig::embed_concurrency",
+      "line": 50,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "should_crawl_page",
+      "line": 218,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "enqueue_discovered",
+      "line": 374,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/output.rs",
+      "function": "UrlListOutput::new",
+      "line": 19,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/output.rs",
+      "function": "StdoutOutput::emit_results",
+      "line": 54,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::check_content_length",
+      "line": 73,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::connect_mem",
+      "line": 52,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::use_ns_db",
+      "line": 58,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/util.rs",
+      "function": "derive_group",
+      "line": 4,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/util.rs",
+      "function": "sanitize_identifier",
+      "line": 28,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::assemble_hybrid_results",
+      "line": 369,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::vector_chunk_sql",
+      "line": 532,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/ops.rs",
+      "function": "DbClient::ensure_embeddings_index",
+      "line": 592,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::new",
+      "line": 22,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::emit_page",
+      "line": 34,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "SurrealOutput::emit_links",
+      "line": 50,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "EmbedMonitor::new",
+      "line": 381,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/output.rs",
+      "function": "EmbedMonitor::record_error",
+      "line": 413,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/migrations/mod.rs",
+      "function": "set_version",
+      "line": 49,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/import.rs",
+      "function": "build_page_record",
+      "line": 44,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "Chunker::count_tokens",
+      "line": 81,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "flush_current",
+      "line": 88,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "EmbeddingProvider::clone",
+      "line": 21,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "default_retry_delay",
+      "line": 49,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/progress.rs",
+      "function": "ProgressReporter::new",
+      "line": 11,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/progress.rs",
+      "function": "ProgressReporter::inc",
+      "line": 22,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/progress.rs",
+      "function": "ProgressReporter::finish",
+      "line": 26,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_url",
+      "line": 25,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "print_json",
+      "line": 155,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_list",
+      "line": 579,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_status",
+      "line": 589,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_reset",
+      "line": 649,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/commands.rs",
+      "function": "db_reset_all",
+      "line": 656,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_depth",
+      "line": 138,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_ignore",
+      "line": 149,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "parse_usize",
+      "line": 270,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "insert_if_not_empty",
+      "line": 403,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "theme_from_config",
+      "line": 191,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "token_theme_from_config",
+      "line": 205,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "command_to_text",
+      "line": 11,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "truncate_string",
+      "line": 112,
+      "cyclomatic": 2.0,
+      "coverage": 100.0,
+      "crap": 2.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_format",
+      "line": 194,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_limit",
+      "line": 199,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_bm25_limit",
+      "line": 204,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_max_depth",
+      "line": 209,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_max_pages",
+      "line": 214,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_true",
+      "line": 219,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/tools.rs",
+      "function": "default_false",
+      "line": 224,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::new",
+      "line": 36,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::handle_list_tools_request",
+      "line": 50,
+      "cyclomatic": 1.0,
+      "coverage": 0.0,
+      "crap": 2.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::default",
+      "line": 12,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::new",
+      "line": 26,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::register",
+      "line": 31,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tool_registry.rs",
+      "function": "ToolRegistry::discover_all",
+      "line": 37,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::name",
+      "line": 37,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::description",
+      "line": 41,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::input_schema",
+      "line": 45,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::output_schema",
+      "line": 49,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::command_name",
+      "line": 55,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/browse.rs",
+      "function": "BrowseTool::capability_metadata",
+      "line": 63,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::name",
+      "line": 36,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::description",
+      "line": 40,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::input_schema",
+      "line": 44,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::output_schema",
+      "line": 48,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::command_name",
+      "line": 54,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/snapshot.rs",
+      "function": "SnapshotTool::capability_metadata",
+      "line": 62,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "default_format",
+      "line": 22,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::name",
+      "line": 44,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::description",
+      "line": 48,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::input_schema",
+      "line": 52,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::output_schema",
+      "line": 56,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::command_name",
+      "line": 62,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/extract.rs",
+      "function": "ExtractTool::capability_metadata",
+      "line": 70,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/tests.rs",
+      "function": "test_browse_tool_execute",
+      "line": 7,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/tests.rs",
+      "function": "test_snapshot_tool_execute",
+      "line": 23,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/tests.rs",
+      "function": "test_extract_tool_markdown",
+      "line": 38,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/tests.rs",
+      "function": "test_extract_tool_html",
+      "line": 54,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/tools/tests.rs",
+      "function": "test_extract_tool_text",
+      "line": 69,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::current_url",
+      "line": 105,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/browser/mod.rs",
+      "function": "BrowserSession::close",
+      "line": 216,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/mod.rs",
+      "function": "strip_html",
+      "line": 75,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/extraction/mod.rs",
+      "function": "extract_title",
+      "line": 120,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/crawl.rs",
+      "function": "CrawlProfile::merge",
+      "line": 108,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/config/embeddings.rs",
+      "function": "interpolate_env_vars",
+      "line": 68,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/links.rs",
+      "function": "is_http_scheme",
+      "line": 51,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "is_start_tag",
+      "line": 73,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/sitemap.rs",
+      "function": "is_end_tag",
+      "line": 77,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "error_result",
+      "line": 353,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "extract_structured_meta",
+      "line": 520,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/mod.rs",
+      "function": "build_manifest_entry",
+      "line": 560,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/output.rs",
+      "function": "DirectoryOutput::new",
+      "line": 70,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/crawl/validator.rs",
+      "function": "PageValidator::default",
+      "line": 21,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/schema.rs",
+      "function": "bootstrap",
+      "line": 6,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::bootstrap",
+      "line": 64,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/client.rs",
+      "function": "DbClient::deref",
+      "line": 106,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/util.rs",
+      "function": "extract_domain",
+      "line": 13,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/db/export.rs",
+      "function": "escape_string",
+      "line": 98,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "Chunker::new",
+      "line": 31,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "Chunker::chunk",
+      "line": 39,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/chunk/mod.rs",
+      "function": "push_chunk",
+      "line": 139,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-app/src/embed/provider.rs",
+      "function": "EmbeddingProvider::next_endpoint",
+      "line": 70,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-app"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_help_tree",
+      "line": 128,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "handle_tree_all",
+      "line": 160,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "ParseState::into_invocation",
+      "line": 248,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "parse_string",
+      "line": 264,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "generate_json_for_path",
+      "line": 290,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree.rs",
+      "function": "positional_to_json",
+      "line": 432,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "TextTokenTheme::normal",
+      "line": 44,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "HelpTreeTheme::default",
+      "line": 61,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/theme.rs",
+      "function": "HelpTreeOpts::default",
+      "line": 96,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/help_tree/render.rs",
+      "function": "pad_and_append_description",
+      "line": 162,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-cli/src/format.rs",
+      "function": "format_cell",
+      "line": 125,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-cli"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "VibeEyeMcpHandler::new",
+      "line": 43,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-mcp"
+    },
+    {
+      "file": "/home/james/Projects/VibeEye/crates/vibeeye-mcp/src/handler.rs",
+      "function": "dispatch_db",
+      "line": 144,
+      "cyclomatic": 1.0,
+      "coverage": 100.0,
+      "crap": 1.0,
+      "crate": "vibeeye-mcp"
+    }
+  ]
+}

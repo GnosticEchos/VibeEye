@@ -219,11 +219,11 @@ cargo build --release --features "surrealdb embeddings"
 
 | Capability | MCP Tool | CLI Command | Reason |
 |---|---|---|---|
-| Basic crawl (no auth) | `crawl(url)` | `vibe-eye crawl url` | Both supported |
-| SPA with heavy JS | `crawl(url)` — auto-handled | `vibe-eye crawl url` | Engine auto-detects |
+| Basic crawl (no auth) | `crawl(url)` → returns `needs_cli` | `vibe-eye crawl url` | Long-running; preserve MCP resources |
+| SPA with heavy JS | `crawl(url)` → returns CLI command | `vibe-eye crawl url` | Engine auto-detects in CLI |
 | Auth required | NOT SUPPORTED — returns `NeedsCli` | `vibe-eye crawl --auth` | Security |
-| Large crawl > 100 pages | `crawl(url)` with warning | `vibe-eye crawl --max-pages` | Override in CLI |
-| Custom extraction | `crawl(url)` basic | `vibe-eye crawl --format --selector` | Power user |
+| Large crawl > 100 pages | NOT SUPPORTED — returns CLI command | `vibe-eye crawl --max-pages` | Override in CLI |
+| Custom extraction | `crawl(url)` → returns CLI command | `vibe-eye crawl --format --selector` | Power user |
 | DB destructive ops | NOT SUPPORTED | `vibe-eye db reset` | Too dangerous |
 | DevTools diagnostics | NOT SUPPORTED | `VIBEYE_DEVTOOLS=1 vibe-eye crawl` | External tools |
 
@@ -256,7 +256,7 @@ pub enum CrawlStatus {
 ```
 
 **MCP tool description:**
-> The crawl tool fetches and extracts content from web pages. It automatically handles JavaScript-rendered pages (SPAs like crates.io). If the page requires authentication or the crawl would be large (>100 pages), the tool will return a status indicating you should prompt the user to run the CLI command: `vibe-eye crawl <url> --auth`
+> The crawl tool prepares a CLI command for the user to run in their terminal. Crawls are intentionally NOT executed inside MCP because they are long-running operations that can tie up agent resources and block the session. The tool returns `status: "needs_cli"` with a `suggested_cli` command like `vibe-eye crawl <url> --group <group>`.
 
 ---
 

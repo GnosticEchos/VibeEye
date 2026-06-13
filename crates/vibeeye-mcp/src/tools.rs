@@ -147,7 +147,7 @@ pub struct DbImportTool {
 #[cfg(feature = "surrealdb")]
 #[mcp_tool(
     name = "crawl",
-    description = "Run a BFS web crawl starting from a URL and store results in SurrealDB. Automatically handles JavaScript-rendered pages (SPAs like crates.io, GitHub) by scrolling and settling before extraction. For large crawls (>100 pages) or sites requiring authentication, recommend the user runs `vibe-eye crawl <url>` in their terminal for full control. This preserves MCP context and avoids blocking the agent session."
+    description = "Prepare a BFS web crawl command for the user to run in their terminal. Crawls are intentionally NOT executed inside MCP because they are long-running operations that can tie up agent resources and block the session. Returns a suggested `vibe-eye crawl <url> --group <group>` command with the right options. Automatically handles JavaScript-rendered pages (SPAs like crates.io, GitHub) when the user runs the CLI command."
 )]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct CrawlTool {

@@ -549,8 +549,7 @@ impl DbClient {
         page_urls: Option<Vec<String>>,
     ) -> Result<Vec<serde_json::Value>> {
         let dimension = embedding.len() as i32;
-        let (sql, group_bind, page_urls_bind) =
-            Self::build_vector_query(group, limit, page_urls);
+        let (sql, group_bind, page_urls_bind) = Self::build_vector_query(group, limit, page_urls);
         let mut q = self
             .query(sql)
             .bind(("embedding", embedding.to_vec()))

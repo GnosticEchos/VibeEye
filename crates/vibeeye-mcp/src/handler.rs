@@ -68,6 +68,7 @@ impl ServerHandler for VibeEyeMcpHandler {
             tools.push(DbImportTool::tool());
             tools.push(DbResetTool::tool());
             tools.push(DbResetAllTool::tool());
+            tools.push(CrawlTool::tool());
         }
 
         #[cfg(feature = "embeddings")]
@@ -278,61 +279,24 @@ impl VibeEyeMcpHandler {
         let tool: CrawlTool = serde_json::from_value(serde_json::Value::Object(arguments))
             .map_err(|e| CallToolError::from_message(e.to_string()))?;
 
-        let outputs = self.crawl_outputs(&tool).await?;
-        let opts = vibeeye_app::crawl::CrawlOptions {
-            url: tool.url.clone(),
-            seed_urls: vec![],
-            max_depth: tool.max_depth,
-            max_pages: tool.max_pages as usize,
-            format: vibeeye_core::ContentFormat::Markdown,
-            respect_robots: true,
-            requests_per_second: 2.0,
-            concurrency: 4,
-            same_origin: true,
-            timeout_secs: 30,
-            use_sitemap: true,
-            settle_ms: 2000,
-            outputs,
-        };
-
-        vibeeye_app::crawl::run(opts)
-            .await
-            .map_err(|e| CallToolError::from_message(e.to_string()))?;
-
         let group = vibeeye_app::db::util::derive_group(&tool.url, tool.group.as_deref());
+        let cli = format!(
+            "vibe-eye crawl '{}' --group {}{}",
+            tool.url,
+            group,
+            if tool.embed { " --embed" } else { "" }
+        );
+
         tool_result(&serde_json::json!({
-            "status": "crawl_completed",
+            "status": "needs_cli",
+            "reason": "Crawls are long-running operations that can tie up MCP resources and block the agent session. Run this in your terminal for full control, progress output, and proper process lifecycle management.",
+            "suggested_cli": cli,
             "url": tool.url,
             "group": group,
             "max_depth": tool.max_depth,
             "max_pages": tool.max_pages,
-            "note": format!("Query results with: db_query <query> --group {}", group),
+            "embed": tool.embed,
         }))
-    }
-
-    async fn crawl_outputs(
-        &self,
-        tool: &CrawlTool,
-    ) -> std::result::Result<
-        Vec<std::sync::Arc<dyn vibeeye_app::crawl::output::CrawlOutput>>,
-        CallToolError,
-    > {
-        if !tool.surrealdb {
-            return Ok(vec![]);
-        }
-        let mut output = vibeeye_app::db::output::SurrealOutput::new(
-            self.db.clone(),
-            &tool.url,
-            tool.group.as_deref(),
-        );
-        #[cfg(feature = "embeddings")]
-        if tool.embed {
-            let config = load_embedding_config()
-                .await
-                .map_err(|e| CallToolError::from_message(e.to_string()))?;
-            output.embed_config = Some(config);
-        }
-        Ok(vec![std::sync::Arc::new(output)])
     }
 
     async fn call_db_reset(

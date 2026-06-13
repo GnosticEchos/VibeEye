@@ -12,6 +12,7 @@
 threshold = 60
 
 # Suppress test files from output (they are still analyzed).
+exclude = ["**/tests/**"]
 allow = [
     "**/tests/**",
     "**/benches/**",

@@ -184,7 +184,8 @@ impl BrowserSession {
     pub async fn settle_and_get_html(&self, settle_ms: u64) -> Result<String> {
         debug!("SPA detected, running settle loop");
         let max_iterations = 3;
-        let sleep_per_iteration = std::time::Duration::from_millis(settle_ms.max(1) / max_iterations);
+        let sleep_per_iteration =
+            std::time::Duration::from_millis(settle_ms.max(1) / max_iterations);
 
         for i in 0..max_iterations {
             let before = self
