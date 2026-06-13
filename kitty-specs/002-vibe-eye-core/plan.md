@@ -25,18 +25,18 @@ crates/
 
 ### Crate Responsibilities
 - **vibeeye-core**: Core domain types, error definitions, trait interfaces
-- **vibeeye-app**: Browser engine integration, content capture, tool implementations, `SonarDiscovery` trait
+- **vibeeye-app**: Browser engine integration, content capture, tool implementations, `TypedTool`/`Tool` traits
 - **vibeeye-cli**: Clap-based CLI, `--help-tree` support, thin wrapper over `vibeeye-app`
 - **vibeeye-mcp**: MCP server, JSON-RPC transport, thin wrapper over `vibeeye-app`
 
 ## High-Fidelity Design: The Sonar Pattern
-Every CLI command will implement a `SonarDiscovery` trait to enable the `--help-tree` requirement.
+Every CLI command will implement the `TypedTool` trait to enable the `--help-tree` requirement.
 - **Reflection**: Commands return a JSON map of their arguments and metadata.
 - **Aggregation**: The conductor recursively traverses the command tree to build the machine-readable "Map of the Eye."
 
 ## Implementation Roadmap
 1. **WP01: Workspace & Core Init**: Setup workspace `Cargo.toml`, `vibeeye-core` crate with domain types.
-2. **WP02: App Library & Sonar Core**: Create `vibeeye-app` crate with `SonarDiscovery` trait and tool registry.
+2. **WP02: App Library & Tool Core**: Create `vibeeye-app` crate with `TypedTool`/`Tool` traits and tool registry.
 3. **WP03: CLI Thin Interface**: Create `vibeeye-cli` crate with `--help-tree` support via clap.
 4. **WP04: MCP Thin Interface**: Create `vibeeye-mcp` crate with JSON-RPC server.
 5. **WP05: Browser Engine & Headless Nav**: Integrate Servo 0.1.0 into `vibeeye-app`.

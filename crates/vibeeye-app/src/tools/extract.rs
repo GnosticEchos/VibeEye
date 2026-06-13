@@ -3,10 +3,9 @@
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::Result;
-use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
+use crate::discovery::TypedTool;
 use vibeeye_core::ContentFormat;
 
 /// Input for the extract tool
@@ -40,7 +39,11 @@ pub struct ExtractOutput {
 #[derive(Debug, Default)]
 pub struct ExtractTool;
 
-impl CapabilityProvider for ExtractTool {
+#[async_trait]
+impl TypedTool for ExtractTool {
+    type Input = ExtractInput;
+    type Output = ExtractOutput;
+
     fn name() -> &'static str {
         "browser_extract"
     }
@@ -56,40 +59,6 @@ impl CapabilityProvider for ExtractTool {
     fn output_schema() -> serde_json::Value {
         serde_json::to_value(schemars::schema_for!(ExtractOutput)).unwrap()
     }
-}
-
-impl SonarDiscovery for ExtractTool {
-    fn command_name(&self) -> &str {
-        <Self as CapabilityProvider>::name()
-    }
-
-    fn description(&self) -> &str {
-        <Self as CapabilityProvider>::description()
-    }
-
-    fn capability_metadata(&self) -> serde_json::Value {
-        json!({
-            "name": <Self as CapabilityProvider>::name(),
-            "description": <Self as CapabilityProvider>::description(),
-            "inputSchema": <Self as CapabilityProvider>::input_schema(),
-            "outputSchema": <Self as CapabilityProvider>::output_schema(),
-        })
-    }
-}
-
-/// Parse format string to ContentFormat
-fn parse_format(format: &str) -> ContentFormat {
-    match format {
-        "html" => ContentFormat::Html,
-        "text" => ContentFormat::Text,
-        _ => ContentFormat::Markdown,
-    }
-}
-
-#[async_trait]
-impl Tool for ExtractTool {
-    type Input = ExtractInput;
-    type Output = ExtractOutput;
 
     async fn execute(&self, input: Self::Input) -> Result<Self::Output> {
         let capture = crate::tools::common::navigate_and_capture(&input.url).await?;
@@ -101,5 +70,14 @@ impl Tool for ExtractTool {
             format: input.format,
             title: capture.title,
         })
+    }
+}
+
+/// Parse format string to ContentFormat
+fn parse_format(format: &str) -> ContentFormat {
+    match format {
+        "html" => ContentFormat::Html,
+        "text" => ContentFormat::Text,
+        _ => ContentFormat::Markdown,
     }
 }

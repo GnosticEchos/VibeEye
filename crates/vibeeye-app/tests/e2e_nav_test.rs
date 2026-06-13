@@ -4,7 +4,7 @@
 //! correctly through the stub backend (no Servo required).
 
 use vibeeye_app::{
-    BrowseInput, BrowseTool, ExtractInput, ExtractTool, SnapshotInput, SnapshotTool, Tool,
+    BrowseInput, BrowseTool, ExtractInput, ExtractTool, SnapshotInput, SnapshotTool, TypedTool,
 };
 
 fn setup_test_env() {
@@ -21,7 +21,7 @@ async fn test_browse_navigate_roundtrip() {
         url: "https://example.com".to_string(),
         wait_until: None,
     };
-    let output = tool.execute(input).await.unwrap();
+    let output = TypedTool::execute(&tool, input).await.unwrap();
 
     assert_eq!(output.current_url, "https://example.com");
     assert!(output.title.is_some());
@@ -35,7 +35,7 @@ async fn test_snapshot_returns_html_and_text() {
     let input = SnapshotInput {
         url: "https://example.com/snapshot".to_string(),
     };
-    let output = tool.execute(input).await.unwrap();
+    let output = TypedTool::execute(&tool, input).await.unwrap();
 
     assert_eq!(output.url, "https://example.com/snapshot");
     assert!(output.title.is_some());
@@ -51,7 +51,7 @@ async fn test_extract_markdown() {
         url: "https://example.com/extract".to_string(),
         format: "markdown".to_string(),
     };
-    let output = tool.execute(input).await.unwrap();
+    let output = TypedTool::execute(&tool, input).await.unwrap();
 
     assert_eq!(output.url, "https://example.com/extract");
     assert!(!output.content.is_empty());
@@ -66,7 +66,7 @@ async fn test_extract_html_passthrough() {
         url: "https://example.com/extract".to_string(),
         format: "html".to_string(),
     };
-    let output = tool.execute(input).await.unwrap();
+    let output = TypedTool::execute(&tool, input).await.unwrap();
 
     assert!(!output.content.is_empty());
     assert_eq!(output.format, "html");
@@ -80,7 +80,7 @@ async fn test_extract_text() {
         url: "https://example.com/extract".to_string(),
         format: "text".to_string(),
     };
-    let output = tool.execute(input).await.unwrap();
+    let output = TypedTool::execute(&tool, input).await.unwrap();
 
     assert!(!output.content.is_empty());
     assert_eq!(output.format, "text");

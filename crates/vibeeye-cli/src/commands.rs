@@ -6,9 +6,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use vibeeye_app::TypedTool;
 use vibeeye_app::config::CrawlConfig;
 use vibeeye_app::crawl::{self, CrawlOptions};
-use vibeeye_app::discovery::Tool;
 use vibeeye_app::tools::{
     BrowseInput, BrowseTool, ExtractInput, ExtractTool, SnapshotInput, SnapshotTool,
 };
@@ -129,7 +129,7 @@ async fn navigate(url: String) -> Result<()> {
         url,
         wait_until: None,
     };
-    let output = Tool::execute(&tool, input).await?;
+    let output = TypedTool::execute(&tool, input).await?;
     tracing::debug!(title = ?output.title, "navigate complete");
     print_json(&output)
 }
@@ -138,7 +138,7 @@ async fn snapshot(url: String) -> Result<()> {
     tracing::debug!(%url, "snapshot command");
     let tool = SnapshotTool;
     let input = SnapshotInput { url };
-    let output = Tool::execute(&tool, input).await?;
+    let output = TypedTool::execute(&tool, input).await?;
     tracing::debug!(title = ?output.title, html_len = output.html.len(), "snapshot complete");
     print_json(&output)
 }
@@ -147,7 +147,7 @@ async fn extract(url: String, format: String) -> Result<()> {
     tracing::debug!(%url, %format, "extract command");
     let tool = ExtractTool;
     let input = ExtractInput { url, format };
-    let output = Tool::execute(&tool, input).await?;
+    let output = TypedTool::execute(&tool, input).await?;
     tracing::debug!(content_len = output.content.len(), "extract complete");
     print_json(&output)
 }

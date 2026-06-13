@@ -1,7 +1,7 @@
 //! VibeEye App Library
 //!
 //! Shared library containing browser logic, content extraction,
-//! and the SonarDiscovery trait for CLI/MCP parity.
+//! and the TypedTool/Tool traits for CLI/MCP parity.
 
 pub mod batch;
 pub mod browser;
@@ -21,7 +21,7 @@ pub mod progress;
 pub mod tool_registry;
 pub mod tools;
 
-pub use discovery::{CapabilityProvider, SonarDiscovery, Tool};
+pub use discovery::{Tool, ToolAdapter, TypedTool};
 pub use error::{AppError, Result};
 pub use tool_registry::ToolRegistry;
 pub use tools::{BrowseInput, BrowseOutput, BrowseTool};

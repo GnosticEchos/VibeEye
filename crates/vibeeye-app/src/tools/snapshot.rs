@@ -3,10 +3,9 @@
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::Result;
-use crate::discovery::{CapabilityProvider, SonarDiscovery, Tool};
+use crate::discovery::TypedTool;
 
 /// Input for the snapshot tool
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
@@ -32,7 +31,11 @@ pub struct SnapshotOutput {
 #[derive(Debug, Default)]
 pub struct SnapshotTool;
 
-impl CapabilityProvider for SnapshotTool {
+#[async_trait]
+impl TypedTool for SnapshotTool {
+    type Input = SnapshotInput;
+    type Output = SnapshotOutput;
+
     fn name() -> &'static str {
         "browser_snapshot"
     }
@@ -48,31 +51,6 @@ impl CapabilityProvider for SnapshotTool {
     fn output_schema() -> serde_json::Value {
         serde_json::to_value(schemars::schema_for!(SnapshotOutput)).unwrap()
     }
-}
-
-impl SonarDiscovery for SnapshotTool {
-    fn command_name(&self) -> &str {
-        <Self as CapabilityProvider>::name()
-    }
-
-    fn description(&self) -> &str {
-        <Self as CapabilityProvider>::description()
-    }
-
-    fn capability_metadata(&self) -> serde_json::Value {
-        json!({
-            "name": <Self as CapabilityProvider>::name(),
-            "description": <Self as CapabilityProvider>::description(),
-            "inputSchema": <Self as CapabilityProvider>::input_schema(),
-            "outputSchema": <Self as CapabilityProvider>::output_schema(),
-        })
-    }
-}
-
-#[async_trait]
-impl Tool for SnapshotTool {
-    type Input = SnapshotInput;
-    type Output = SnapshotOutput;
 
     async fn execute(&self, input: Self::Input) -> Result<Self::Output> {
         let capture = crate::tools::common::navigate_and_capture(&input.url).await?;

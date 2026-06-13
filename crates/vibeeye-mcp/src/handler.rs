@@ -8,9 +8,7 @@ use rust_mcp_sdk::{
     },
 };
 use std::sync::Arc;
-
-use crate::tools::{ExtractTool, NavigateTool, SnapshotTool};
-use vibeeye_app::Tool;
+use vibeeye_app::ToolRegistry;
 
 #[cfg(feature = "surrealdb")]
 use crate::tools::{
@@ -52,12 +50,20 @@ impl ServerHandler for VibeEyeMcpHandler {
         _request: Option<PaginatedRequestParams>,
         _runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<ListToolsResult, RpcError> {
+        let registry = ToolRegistry::new();
         #[allow(unused_mut)]
-        let mut tools = vec![
-            NavigateTool::tool(),
-            SnapshotTool::tool(),
-            ExtractTool::tool(),
-        ];
+        let mut tools: Vec<rust_mcp_sdk::schema::Tool> = Vec::new();
+
+        for meta in registry.discover_all() {
+            let tool_json = serde_json::json!({
+                "name": meta.name,
+                "description": meta.description,
+                "inputSchema": meta.input_schema,
+            });
+            let mcp_tool: rust_mcp_sdk::schema::Tool = serde_json::from_value(tool_json)
+                .map_err(|e| RpcError::internal_error().with_message(e.to_string()))?;
+            tools.push(mcp_tool);
+        }
 
         #[cfg(feature = "surrealdb")]
         {
@@ -110,12 +116,13 @@ async fn dispatch_browser(
     name: &str,
     arguments: serde_json::Map<String, serde_json::Value>,
 ) -> std::result::Result<CallToolResult, CallToolError> {
-    match name {
-        "browser_navigate" => call_navigate(arguments).await,
-        "browser_snapshot" => call_snapshot(arguments).await,
-        "browser_extract" => call_extract(arguments).await,
-        _ => Err(CallToolError::unknown_tool(name.to_string())),
-    }
+    let registry = ToolRegistry::new();
+    let input_value = serde_json::Value::Object(arguments);
+    let output_value = registry
+        .execute(name, input_value)
+        .await
+        .map_err(|e| CallToolError::from_message(e.to_string()))?;
+    tool_result(&output_value)
 }
 
 #[cfg(feature = "surrealdb")]
@@ -147,53 +154,6 @@ async fn dispatch_db(
     _arguments: serde_json::Map<String, serde_json::Value>,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     Err(CallToolError::unknown_tool(name.to_string()))
-}
-
-// ── Browser tools ──────────────────────────────────────────────────────────
-
-async fn call_navigate(
-    arguments: serde_json::Map<String, serde_json::Value>,
-) -> std::result::Result<CallToolResult, CallToolError> {
-    let tool: NavigateTool = serde_json::from_value(serde_json::Value::Object(arguments))
-        .map_err(|e| CallToolError::from_message(e.to_string()))?;
-    let input = vibeeye_app::BrowseInput {
-        url: tool.url,
-        wait_until: tool.wait_until,
-    };
-    let output = vibeeye_app::BrowseTool
-        .execute(input)
-        .await
-        .map_err(|e: vibeeye_app::AppError| CallToolError::from_message(e.to_string()))?;
-    tool_result(&output)
-}
-
-async fn call_snapshot(
-    arguments: serde_json::Map<String, serde_json::Value>,
-) -> std::result::Result<CallToolResult, CallToolError> {
-    let tool: SnapshotTool = serde_json::from_value(serde_json::Value::Object(arguments))
-        .map_err(|e| CallToolError::from_message(e.to_string()))?;
-    let input = vibeeye_app::SnapshotInput { url: tool.url };
-    let output = vibeeye_app::SnapshotTool
-        .execute(input)
-        .await
-        .map_err(|e: vibeeye_app::AppError| CallToolError::from_message(e.to_string()))?;
-    tool_result(&output)
-}
-
-async fn call_extract(
-    arguments: serde_json::Map<String, serde_json::Value>,
-) -> std::result::Result<CallToolResult, CallToolError> {
-    let tool: ExtractTool = serde_json::from_value(serde_json::Value::Object(arguments))
-        .map_err(|e| CallToolError::from_message(e.to_string()))?;
-    let input = vibeeye_app::ExtractInput {
-        url: tool.url,
-        format: tool.format,
-    };
-    let output = vibeeye_app::ExtractTool
-        .execute(input)
-        .await
-        .map_err(|e: vibeeye_app::AppError| CallToolError::from_message(e.to_string()))?;
-    tool_result(&output)
 }
 
 // ── SurrealDB tools ────────────────────────────────────────────────────────

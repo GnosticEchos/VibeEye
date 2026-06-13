@@ -9,7 +9,7 @@ A Rust-native headless browser for agentic content extraction using Servo.
 - **Headless First**: Zero dependencies on X11 or Wayland.
 
 ## The Sonar Pattern
-- **Mandatory**: EVERY new command struct MUST implement the `SonarDiscovery` trait.
+- **Mandatory**: EVERY new command struct MUST implement the `TypedTool` trait.
 - **Reflection**: Commands must return a JSON map of arguments and metadata for autonomous agent discovery.
 - **Verification**: `vibe-eye --help-tree -f json` must always return a complete, valid capability map.
 

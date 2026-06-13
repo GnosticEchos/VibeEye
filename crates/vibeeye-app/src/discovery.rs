@@ -1,71 +1,58 @@
-//! SonarDiscovery trait for reflective capability discovery
+//! Tool discovery and execution traits
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use serde_json::json;
 
-/// Static metadata for capability discovery (no instantiation required)
-pub trait CapabilityProvider: Send + Sync {
-    /// Tool name for registration
-    fn name() -> &'static str;
-
-    /// Tool description
-    fn description() -> &'static str;
-
-    /// JSON schema for tool input
-    fn input_schema() -> serde_json::Value;
-
-    /// JSON schema for tool output
-    fn output_schema() -> serde_json::Value;
+/// Metadata for a discovered tool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolMetadata {
+    pub name: String,
+    pub description: String,
+    pub input_schema: serde_json::Value,
+    pub output_schema: serde_json::Value,
 }
 
-/// Dynamic trait for commands/tools that support reflective discovery (runtime)
-pub trait SonarDiscovery: Send + Sync {
-    /// Returns the command name
-    fn command_name(&self) -> &str;
-
-    /// Returns the description
-    fn description(&self) -> &str;
-
-    /// Returns full capability metadata as JSON
-    fn capability_metadata(&self) -> serde_json::Value {
-        json!({
-            "name": self.command_name(),
-            "description": self.description(),
-        })
-    }
-}
-
-/// Async tool execution trait for MCP/CLI parity
+/// Strongly-typed tool trait. Not object-safe due to associated types.
 #[async_trait]
-pub trait Tool: SonarDiscovery {
-    /// Input type for this tool
+pub trait TypedTool: Send + Sync {
     type Input: DeserializeOwned + Send;
-    /// Output type for this tool
     type Output: Serialize + Send;
 
-    /// Execute the tool with given input
+    fn name() -> &'static str;
+    fn description() -> &'static str;
+    fn input_schema() -> serde_json::Value;
+    fn output_schema() -> serde_json::Value;
+
     async fn execute(&self, input: Self::Input) -> crate::Result<Self::Output>;
 }
 
-/// Metadata for a discovered capability
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CapabilityMetadata {
-    pub name: String,
-    pub description: String,
-    pub arguments: Vec<ArgumentMetadata>,
+/// Object-safe trait for dynamic tool execution and discovery.
+#[async_trait]
+pub trait Tool: Send + Sync {
+    fn metadata(&self) -> ToolMetadata;
+    async fn execute_json(&self, input: serde_json::Value) -> crate::Result<serde_json::Value>;
 }
 
-/// Metadata for a single argument
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArgumentMetadata {
-    pub name: String,
-    pub description: String,
-    pub required: bool,
-    pub arg_type: String,
-}
+/// Wrapper to adapt a `TypedTool` into an object-safe `Tool`.
+pub struct ToolAdapter<T: TypedTool>(pub T);
 
-/// Convert a type to JSON schema for tool definitions
-pub fn type_to_schema<T: schemars::JsonSchema>() -> serde_json::Value {
-    serde_json::to_value(schemars::schema_for!(T)).unwrap()
+#[async_trait]
+impl<T: TypedTool> Tool for ToolAdapter<T> {
+    fn metadata(&self) -> ToolMetadata {
+        ToolMetadata {
+            name: T::name().to_string(),
+            description: T::description().to_string(),
+            input_schema: T::input_schema(),
+            output_schema: T::output_schema(),
+        }
+    }
+
+    async fn execute_json(&self, input: serde_json::Value) -> crate::Result<serde_json::Value> {
+        let typed_input: T::Input = serde_json::from_value(input)
+            .map_err(|e| crate::AppError::InvalidInput(format!("Invalid tool input: {}", e)))?;
+
+        let output = self.0.execute(typed_input).await?;
+
+        serde_json::to_value(output).map_err(crate::AppError::Serde)
+    }
 }

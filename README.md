@@ -628,7 +628,7 @@ cargo test --features "surrealdb embeddings"
 ### Project principles
 
 - **No Chromium** — Servo only. No Playwright, Puppeteer, or WebKit dependencies.
-- **Sonar pattern** — Every CLI command implements `SonarDiscovery` for capability reflection.
+- **Unified Tool pattern** — Every CLI command implements the `TypedTool` trait for capability reflection and execution.
 - **Headless first** — Zero X11/Wayland dependencies.
 - **Thin interface** — Browser logic and interface handlers are strictly separated.
 

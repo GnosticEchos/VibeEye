@@ -24,7 +24,7 @@ Shared library containing all business logic.
 - **Role**: Registry of all available tools for CLI and MCP.
 - **Attributes**: tools: Vec<ToolDefinition>, sonar_metadata.
 
-**SonarDiscovery**
+**TypedTool / Tool**
 - **Role**: Trait for reflective capability discovery.
 - **Attributes**: command_name, description, arguments, metadata.
 

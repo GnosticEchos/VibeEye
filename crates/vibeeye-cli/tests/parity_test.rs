@@ -42,16 +42,8 @@ fn cli_help_tree_matches_tool_registry() {
 
     let mut app_tools_map: HashMap<String, String> = HashMap::new();
     for meta in app_tools {
-        let name = meta
-            .get("name")
-            .and_then(|n| n.as_str())
-            .expect("tool metadata missing name")
-            .to_string();
-        let desc = meta
-            .get("description")
-            .and_then(|d| d.as_str())
-            .unwrap_or("")
-            .to_string();
+        let name = meta.name;
+        let desc = meta.description;
         app_tools_map.insert(name, desc);
     }
 

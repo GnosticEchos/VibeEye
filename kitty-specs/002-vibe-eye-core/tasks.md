@@ -9,10 +9,10 @@ Setup workspace `Cargo.toml` and create `vibeeye-core` crate with domain types.
 - **Outputs**: `Cargo.toml` (workspace), `crates/vibeeye-core/`
 
 ## WP02: App Library & Sonar Core
-Create `vibeeye-app` crate with `SonarDiscovery` trait and tool registry pattern.
+Create `vibeeye-app` crate with `TypedTool`/`Tool` traits and tool registry pattern.
 - **Dependencies**: WP01
 - **Requirements**: FR-06, FR-08
-- **Outputs**: `crates/vibeeye-app/`, `SonarDiscovery` trait
+- **Outputs**: `crates/vibeeye-app/`, `TypedTool`/`Tool` traits
 
 ## WP03: CLI Thin Interface
 Create `vibeeye-cli` crate - thin clap wrapper over `vibeeye-app` with `--help-tree`.

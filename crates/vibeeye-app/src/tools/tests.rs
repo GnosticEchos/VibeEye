@@ -1,6 +1,6 @@
 //! Tests for tool implementations
 
-use crate::discovery::Tool;
+use crate::discovery::TypedTool;
 use crate::tools::*;
 
 #[tokio::test]
@@ -11,7 +11,7 @@ async fn test_browse_tool_execute() {
         wait_until: None,
     };
 
-    let result = Tool::execute(&tool, input).await;
+    let result = TypedTool::execute(&tool, input).await;
     assert!(result.is_ok());
 
     let output = result.unwrap();
@@ -26,7 +26,7 @@ async fn test_snapshot_tool_execute() {
         url: "https://example.com".to_string(),
     };
 
-    let result = Tool::execute(&tool, input).await;
+    let result = TypedTool::execute(&tool, input).await;
     assert!(result.is_ok());
 
     let output = result.unwrap();
@@ -42,7 +42,7 @@ async fn test_extract_tool_markdown() {
         format: "markdown".to_string(),
     };
 
-    let result = Tool::execute(&tool, input).await;
+    let result = TypedTool::execute(&tool, input).await;
     assert!(result.is_ok());
 
     let output = result.unwrap();
@@ -58,7 +58,7 @@ async fn test_extract_tool_html() {
         format: "html".to_string(),
     };
 
-    let result = Tool::execute(&tool, input).await;
+    let result = TypedTool::execute(&tool, input).await;
     assert!(result.is_ok());
 
     let output = result.unwrap();
@@ -73,7 +73,7 @@ async fn test_extract_tool_text() {
         format: "text".to_string(),
     };
 
-    let result = Tool::execute(&tool, input).await;
+    let result = TypedTool::execute(&tool, input).await;
     assert!(result.is_ok());
 
     let output = result.unwrap();

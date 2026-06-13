@@ -20,4 +20,4 @@ owned_files:
 tags: []
 ---
 # WP02: App Library & Sonar Core
-Create `vibeeye-app` crate with `SonarDiscovery` trait, tool registry pattern, and shared library foundation.
+Create `vibeeye-app` crate with `TypedTool`/`Tool` traits, tool registry pattern, and shared library foundation.
