@@ -64,6 +64,27 @@ impl EmbeddingConfig {
     }
 }
 
+/// Load the embedding configuration from the default config path.
+pub fn load_embedding_config() -> crate::Result<EmbeddingConfig> {
+    let config_path = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("vibe-eye")
+        .join("crawl.toml");
+
+    let config = if config_path.exists() {
+        super::crawl::CrawlConfig::load(Some(&config_path))?
+    } else {
+        super::crawl::CrawlConfig::default()
+    };
+
+    config.global.embeddings.ok_or_else(|| {
+        crate::Error::Config(
+            "no [embeddings] section found in config. Add one to ~/.config/vibe-eye/crawl.toml"
+                .to_string(),
+        )
+    })
+}
+
 /// Replace `${VAR}` and `$VAR` with environment variable values.
 pub fn interpolate_env_vars(value: &str) -> String {
     replace_plain_vars(&replace_braced_vars(value))

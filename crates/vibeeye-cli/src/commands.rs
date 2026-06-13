@@ -20,6 +20,16 @@ use crate::cli::{DbCommands, OutputFormat};
 #[cfg(feature = "surrealdb")]
 use crate::format::format_value;
 
+/// Exit the process cleanly, bypassing Servo's SpiderMonkey teardown segfault.
+/// Servo embeds SpiderMonkey, whose global mutex destructor segfaults during
+/// normal process teardown. `std::process::exit` runs atexit handlers, so we
+/// use `libc::_exit` which bypasses them entirely.
+fn clean_exit() -> ! {
+    let _ = std::io::stdout().flush();
+    let _ = std::io::stderr().flush();
+    unsafe { libc::_exit(0) }
+}
+
 /// Return the SurrealDB connection URL.
 #[cfg(feature = "surrealdb")]
 fn db_url() -> String {
@@ -154,12 +164,7 @@ async fn extract(url: String, format: String) -> Result<()> {
 
 fn print_json<T: Serialize>(value: &T) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(value)?);
-    // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
-    // during normal process teardown.  std::process::exit runs atexit
-    // handlers so we use libc::_exit which bypasses them entirely.
-    std::io::stdout().flush().unwrap();
-    std::io::stderr().flush().unwrap();
-    unsafe { libc::_exit(0) };
+    clean_exit()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -222,12 +227,7 @@ async fn crawl_command(
     );
 
     crawl::run(opts).await?;
-    // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
-    // during normal process teardown.  std::process::exit runs atexit
-    // handlers so we use libc::_exit which bypasses them entirely.
-    std::io::stdout().flush().unwrap();
-    std::io::stderr().flush().unwrap();
-    unsafe { libc::_exit(0) };
+    clean_exit()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -265,7 +265,7 @@ async fn batch_command(
         let mut surreal = vibeeye_app::db::SurrealOutput::new(client, &urls[0], Some(&group_name));
         #[cfg(feature = "embeddings")]
         if embed {
-            let config = load_embedding_config().await?;
+            let config = vibeeye_app::config::embeddings::load_embedding_config()?;
             surreal.embed_config = Some(config);
         }
         Some(surreal)
@@ -305,13 +305,7 @@ async fn batch_command(
     };
 
     vibeeye_app::batch::run(opts).await?;
-
-    // Servo embeds SpiderMonkey, whose global mutex destructor segfaults
-    // during normal process teardown.  std::process::exit runs atexit
-    // handlers so we use libc::_exit which bypasses them entirely.
-    std::io::stdout().flush().unwrap();
-    std::io::stderr().flush().unwrap();
-    unsafe { libc::_exit(0) };
+    clean_exit()
 }
 
 fn load_profile(
@@ -520,25 +514,6 @@ async fn export_command(target: PathBuf, group: Option<String>) -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "embeddings")]
-async fn load_embedding_config() -> Result<vibeeye_app::config::embeddings::EmbeddingConfig> {
-    let config_path = dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("vibe-eye")
-        .join("crawl.toml");
-    let config = if config_path.exists() {
-        vibeeye_app::config::CrawlConfig::load(Some(&config_path))?
-    } else {
-        vibeeye_app::config::CrawlConfig::default()
-    };
-    let profile = config.global;
-    profile.embeddings.ok_or_else(|| {
-        anyhow::anyhow!(
-            "no [embeddings] section found in config. Add one to ~/.config/vibe-eye/crawl.toml"
-        )
-    })
-}
-
 #[cfg(feature = "surrealdb")]
 async fn db_command(command: DbCommands) -> Result<()> {
     use vibeeye_app::db::DbClient;
@@ -616,7 +591,7 @@ async fn db_vector(
     limit: usize,
     format: OutputFormat,
 ) -> Result<()> {
-    let config = load_embedding_config().await?;
+    let config = vibeeye_app::config::embeddings::load_embedding_config()?;
     let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
     let embedding = provider.embed_single(&query).await?;
     let results = client
@@ -635,7 +610,7 @@ async fn db_hybrid(
     bm25_limit: usize,
     format: OutputFormat,
 ) -> Result<()> {
-    let config = load_embedding_config().await?;
+    let config = vibeeye_app::config::embeddings::load_embedding_config()?;
     let provider = vibeeye_app::embed::EmbeddingProvider::new(&config)?;
     let embedding = provider.embed_single(&query).await?;
     let results = client

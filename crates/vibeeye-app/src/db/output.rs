@@ -124,7 +124,7 @@ impl SurrealOutput {
         let known_dim = self.probe_dimension(&entries, &provider).await?;
 
         let (records, monitor, progress) =
-            Self::embed_batches(entries, provider, config, &self.group, known_dim).await;
+            Self::embed_batches(entries, provider, config, &self.group, known_dim).await?;
 
         let count = self
             .insert_chunk_records(records, monitor, progress)
@@ -208,11 +208,11 @@ impl SurrealOutput {
         config: &crate::config::embeddings::EmbeddingConfig,
         group: &str,
         known_dim: Option<usize>,
-    ) -> (
+    ) -> anyhow::Result<(
         Vec<crate::db::models::ChunkRecord>,
         std::sync::Arc<EmbedMonitor>,
         std::sync::Arc<std::sync::Mutex<crate::progress::ProgressReporter>>,
-    ) {
+    )> {
         let total_chunks = entries.len();
         let embed_concurrency = config.embed_concurrency();
         let monitor = std::sync::Arc::new(EmbedMonitor::new(embed_concurrency));
@@ -255,8 +255,11 @@ impl SurrealOutput {
                     }
                     Err(e) => {
                         monitor.record_error();
-                        tracing::warn!(batch_idx, error = %e, "embedding batch failed");
-                        return Vec::new();
+                        tracing::error!(batch_idx, error = %e, "embedding batch failed");
+                        return Err(anyhow::anyhow!(
+                            "embedding batch {} failed: {}. Check if the embedding server is running and responsive.",
+                            batch_idx, e
+                        ));
                     }
                 };
 
@@ -286,7 +289,7 @@ impl SurrealOutput {
                     record_count = records.len(),
                     "embedding batch completed"
                 );
-                records
+                Ok(records)
             });
         }
 
@@ -296,7 +299,7 @@ impl SurrealOutput {
         while let Some(task_result) = tasks.join_next().await {
             task_count += 1;
             match task_result {
-                Ok(records) => {
+                Ok(Ok(records)) => {
                     tracing::debug!(
                         record_count = records.len(),
                         task_count,
@@ -304,8 +307,13 @@ impl SurrealOutput {
                     );
                     all_records.extend(records);
                 }
+                Ok(Err(e)) => {
+                    tracing::error!(task_count, error = %e, "embedding task failed");
+                    return Err(e);
+                }
                 Err(e) => {
-                    tracing::warn!(task_count, error = %e, "embedding task panicked");
+                    tracing::error!(task_count, error = %e, "embedding task panicked");
+                    return Err(anyhow::anyhow!("embedding task panicked: {}", e));
                 }
             }
             if last_report.elapsed().as_secs() >= 30 {
@@ -319,7 +327,7 @@ impl SurrealOutput {
             "all embedding tasks collected"
         );
 
-        (all_records, monitor, progress)
+        Ok((all_records, monitor, progress))
     }
 
     async fn insert_chunk_records(

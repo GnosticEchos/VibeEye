@@ -341,30 +341,10 @@ impl VibeEyeMcpHandler {
 
 #[cfg(feature = "embeddings")]
 async fn load_embedding_provider() -> Result<vibeeye_app::embed::EmbeddingProvider, CallToolError> {
-    let config = load_embedding_config()
-        .await
+    let config = vibeeye_app::config::embeddings::load_embedding_config()
         .map_err(|e| CallToolError::from_message(e.to_string()))?;
     vibeeye_app::embed::EmbeddingProvider::new(&config)
         .map_err(|e| CallToolError::from_message(e.to_string()))
-}
-
-#[cfg(feature = "embeddings")]
-async fn load_embedding_config()
--> Result<vibeeye_app::config::embeddings::EmbeddingConfig, anyhow::Error> {
-    let config_path = dirs::config_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("vibe-eye")
-        .join("crawl.toml");
-    let config = if config_path.exists() {
-        vibeeye_app::config::CrawlConfig::load(Some(&config_path))?
-    } else {
-        vibeeye_app::config::CrawlConfig::default()
-    };
-    config.global.embeddings.ok_or_else(|| {
-        anyhow::anyhow!(
-            "no [embeddings] section found in config. Add one to ~/.config/vibe-eye/crawl.toml"
-        )
-    })
 }
 
 fn tool_result<T: serde::Serialize>(
