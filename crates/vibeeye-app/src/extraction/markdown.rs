@@ -3,8 +3,7 @@
 //! Uses `html-to-markdown-rs` (astral-tl parser) for robust heading/link/list/table/code
 //! conversion. Replaces the primitive `strip_html` stub from pre-WP06.
 
-use crate::{AppError, Result};
-use vibeeye_core::VibeError;
+use crate::{Error, Result};
 
 /// Convert raw HTML into clean Markdown.
 ///
@@ -12,7 +11,7 @@ use vibeeye_core::VibeError;
 /// blockquotes and inline emphasis.
 pub fn html_to_markdown(html: &str) -> Result<String> {
     let result = html_to_markdown_rs::convert(html, None)
-        .map_err(|e| AppError::Core(VibeError::Extraction(format!("markdown conversion: {e}"))))?;
+        .map_err(|e| Error::Extraction(format!("markdown conversion: {e}")))?;
 
     Ok(result.content.unwrap_or_default())
 }

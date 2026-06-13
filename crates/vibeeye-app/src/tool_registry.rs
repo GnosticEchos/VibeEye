@@ -58,7 +58,7 @@ impl ToolRegistry {
         let tool = self
             .tools
             .get(name)
-            .ok_or_else(|| crate::AppError::InvalidInput(format!("Unknown tool: {}", name)))?;
+            .ok_or_else(|| crate::Error::InvalidInput(format!("Unknown tool: {}", name)))?;
         tool.execute_json(input).await
     }
 

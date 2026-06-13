@@ -311,7 +311,7 @@ impl DbClient {
         tokio::time::timeout(std::time::Duration::from_secs(120), query)
             .await
             .map_err(|_| {
-                crate::AppError::InvalidInput("chunk insert timed out after 120s".into())
+                crate::Error::InvalidInput("chunk insert timed out after 120s".into())
             })??;
         Ok(())
     }

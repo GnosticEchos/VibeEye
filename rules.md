@@ -15,6 +15,7 @@ A Rust-native headless browser for agentic content extraction using Servo.
 
 ## Coding Standards
 - **Quality Gate**: Every commit MUST pass `cargo fmt --check`, `cargo clippy -- -D warnings`, and `cargo test`.
+- **Unified Errors**: Use the single `vibeeye_core::VibeError` (re-exported as `crate::Error` in `vibeeye-app`). Do not create new error enums or wrap errors in redundant `Core` variants.
 - **Memory Constraint**: Active page loads MUST NOT exceed 500MB RAM.
 - **Exit Strategy**: All missions must end with a clean process exit and exit code 0.
 

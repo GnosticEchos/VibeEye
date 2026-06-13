@@ -67,7 +67,7 @@ impl BrowserSession {
         };
 
         if engine.is_none() && !is_test_mode() {
-            return Err(crate::AppError::Browser(
+            return Err(crate::Error::Browser(
                 "Browser engine unavailable (init failed or already in use)".to_string(),
             ));
         }
@@ -86,13 +86,13 @@ impl BrowserSession {
             let final_url = engine
                 .navigate(url)
                 .await
-                .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
+                .map_err(|e| crate::Error::Navigation(e.to_string()))?;
             self.nav_state.current_url = Some(final_url);
         } else if is_test_mode() {
             // Test stub: accept the URL as-is
             self.nav_state.current_url = Some(url.to_string());
         } else {
-            return Err(crate::AppError::Browser(
+            return Err(crate::Error::Browser(
                 "Browser engine unavailable".to_string(),
             ));
         }
@@ -112,7 +112,7 @@ impl BrowserSession {
             engine
                 .get_html()
                 .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))
+                .map_err(|e| crate::Error::Browser(e.to_string()))
         } else if is_test_mode() {
             // Test stub: return minimal placeholder HTML
             let url = self.current_url().unwrap_or("unknown");
@@ -120,7 +120,7 @@ impl BrowserSession {
                 "<html><head><title>Test</title></head><body>Navigated to: {url}</body></html>"
             ))
         } else {
-            Err(crate::AppError::Browser(
+            Err(crate::Error::Browser(
                 "Browser engine unavailable".to_string(),
             ))
         }
@@ -132,13 +132,13 @@ impl BrowserSession {
             engine
                 .get_text()
                 .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))
+                .map_err(|e| crate::Error::Browser(e.to_string()))
         } else if is_test_mode() {
             // Test stub: return simple text
             let url = self.current_url().unwrap_or("unknown");
             Ok(format!("Navigated to: {url}"))
         } else {
-            Err(crate::AppError::Browser(
+            Err(crate::Error::Browser(
                 "Browser engine unavailable".to_string(),
             ))
         }
@@ -150,12 +150,12 @@ impl BrowserSession {
             engine
                 .eval_js(script)
                 .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))
+                .map_err(|e| crate::Error::Browser(e.to_string()))
         } else if is_test_mode() {
             // Test stub: echo the script
             Ok(format!("// test eval: {script}"))
         } else {
-            Err(crate::AppError::Browser(
+            Err(crate::Error::Browser(
                 "Browser engine unavailable".to_string(),
             ))
         }
@@ -167,12 +167,12 @@ impl BrowserSession {
             engine
                 .get_dom_links()
                 .await
-                .map_err(|e| crate::AppError::Browser(e.to_string()))
+                .map_err(|e| crate::Error::Browser(e.to_string()))
         } else if is_test_mode() {
             // Test stub: return empty list
             Ok(Vec::new())
         } else {
-            Err(crate::AppError::Browser(
+            Err(crate::Error::Browser(
                 "Browser engine unavailable".to_string(),
             ))
         }
@@ -209,7 +209,7 @@ impl BrowserSession {
 
         self.get_html()
             .await
-            .map_err(|e| crate::AppError::Browser(e.to_string()))
+            .map_err(|e| crate::Error::Browser(e.to_string()))
     }
 
     /// Close the browser session, returning the engine to the global pool.

@@ -6,8 +6,7 @@ use std::time::{Duration, Instant};
 use servo::{Servo, WebView};
 use tracing::{debug, trace, warn};
 
-use crate::Result;
-use vibeeye_core::VibeError;
+use crate::{Error, Result};
 
 /// Spin the event loop until the webview reports `LoadStatus::Complete`.
 pub fn wait_for_load(servo: &Servo, webview: &WebView) {
@@ -49,9 +48,9 @@ pub fn eval_js_with_timeout(
     let start = Instant::now();
     while result_slot.lock().unwrap().is_none() {
         if start.elapsed() > timeout {
-            return Err(crate::AppError::Core(VibeError::Extraction(format!(
+            return Err(crate::Error::Extraction(format!(
                 "{context} timed out (JS callback never fired)"
-            ))));
+            )));
         }
         servo.spin_event_loop();
         std::thread::yield_now();
@@ -62,7 +61,7 @@ pub fn eval_js_with_timeout(
         .as_ref()
         .expect("result populated by callback")
         .as_ref()
-        .map_err(|e| VibeError::Extraction(format!("JS eval error: {e:?}")))?
+        .map_err(|e| Error::Extraction(format!("JS eval error: {e:?}")))?
         .clone();
 
     Ok(js_result)

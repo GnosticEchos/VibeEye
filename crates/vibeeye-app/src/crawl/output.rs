@@ -30,15 +30,15 @@ impl CrawlOutput for UrlListOutput {
             .open(&self.path)
             .await
             .map_err(|e| {
-                crate::AppError::InvalidInput(format!("failed to open URL list file: {e}"))
+                crate::Error::InvalidInput(format!("failed to open URL list file: {e}"))
             })?;
 
         for result in results {
             if result.error.is_none() {
                 let line = format!("{}\n", result.url);
-                file.write_all(line.as_bytes()).await.map_err(|e| {
-                    crate::AppError::InvalidInput(format!("failed to write URL: {e}"))
-                })?;
+                file.write_all(line.as_bytes())
+                    .await
+                    .map_err(|e| crate::Error::InvalidInput(format!("failed to write URL: {e}")))?;
             }
         }
         Ok(())
@@ -79,7 +79,7 @@ impl DirectoryOutput {
 impl CrawlOutput for DirectoryOutput {
     async fn emit_results(&self, results: &[CrawlResult]) -> Result<()> {
         tokio::fs::create_dir_all(&self.dir).await.map_err(|e| {
-            crate::AppError::InvalidInput(format!("failed to create output directory: {e}"))
+            crate::Error::InvalidInput(format!("failed to create output directory: {e}"))
         })?;
 
         let mut manifest: Vec<serde_json::Value> = Vec::new();
@@ -89,7 +89,7 @@ impl CrawlOutput for DirectoryOutput {
             let filepath = self.dir.join(&filename);
             tokio::fs::write(&filepath, &result.content)
                 .await
-                .map_err(|e| crate::AppError::InvalidInput(format!("failed to write file: {e}")))?;
+                .map_err(|e| crate::Error::InvalidInput(format!("failed to write file: {e}")))?;
             manifest.push(crate::crawl::build_manifest_entry(result, &filename));
         }
 

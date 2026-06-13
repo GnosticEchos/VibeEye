@@ -149,12 +149,12 @@ flowchart LR
 
 Both the CLI (`vibeeye-cli`) and the MCP server (`vibeeye-mcp`) are **thin wrappers**
 around the same shared library (`vibeeye-app`). Every capability is implemented
-exactly once as a `Tool` trait impl in `vibeeye-app`, then consumed by both UIs:
+exactly once via the unified `TypedTool` trait in `vibeeye-app`, then consumed by both UIs:
 
 ```
                       ┌──────────────────────────────┐
                       │     vibeeye-app (shared)     │
-                      │  Tool trait implementations  │
+                      │  TypedTool + Tool traits     │
                       │  BrowseTool | SnapshotTool   │
                       │  ExtractTool | crawl::run    │
                       │  db::DbClient | Chunker      │
@@ -169,14 +169,19 @@ exactly once as a `Tool` trait impl in `vibeeye-app`, then consumed by both UIs:
                 │                  │   │                  │
                 │  help-tree JSON  │   │  MCP tools/list  │
                 │  <- ToolRegistry │   │  <- ToolRegistry  │
+                │  direct execute  │   │  dynamic execute │
                 └──────────────────┘   └──────────────────┘
 ```
 
 ### Interface parity
 
 The shared `ToolRegistry` in `vibeeye-app` powers both the CLI's `--help-tree`
-introspection and the MCP server's `tools/list` response. A dedicated
-[`parity_test`](crates/vibeeye-cli/tests/parity_test.rs) verifies they stay in sync:
+introspection and the MCP server's `tools/list` and `tools/call` responses. 
+The MCP handler dynamically builds its tool list from `ToolRegistry::discover_all()` 
+and routes execution directly through `ToolRegistry::execute()`, eliminating any 
+duplicate tool definitions between the CLI and MCP layers.
+
+A dedicated [`parity_test`](crates/vibeeye-cli/tests/parity_test.rs) verifies they stay in sync:
 
 ```rust
 // Verifies that --help-tree -f json exposes the same tools as MCP tools/list
@@ -322,6 +327,21 @@ Key-value store for schema version tracking and other metadata.
 ---
 
 ## 10. Key Architectural Patterns
+
+### Unified Tool Abstraction
+
+To eliminate redundant trait implementations and enable dynamic execution, tools use a dual-trait pattern:
+- **`TypedTool`**: A strongly-typed trait defining `Input`, `Output`, and static metadata (`name`, `description`, `input_schema`, `output_schema`). Not object-safe due to associated types.
+- **`Tool`**: An object-safe trait for dynamic dispatch, exposing `metadata()` and `execute_json()`.
+- **`ToolAdapter<T>`**: A wrapper that adapts any `TypedTool` into the object-safe `Tool` trait, handling JSON serialization/deserialization automatically.
+
+This allows the `ToolRegistry` to store `Box<dyn Tool>` and execute tools dynamically by name, serving both the CLI and MCP from a single source of truth.
+
+### Unified Error Handling
+
+The workspace uses a single, consolidated error type to prevent duplication and information loss:
+- **`vibeeye_core::VibeError`**: The single source of truth for all errors (`Browser`, `Navigation`, `Extraction`, `ToolExecution`, `InvalidInput`, `Config`, `Mcp`, `Io`, `Serialization`).
+- **`vibeeye_app::Error`**: A simple re-export (`pub use vibeeye_core::VibeError as Error;`) ensuring all app-level code uses the unified type without wrapping it in redundant `Core(...)` variants.
 
 ### Process-wide Servo singleton
 

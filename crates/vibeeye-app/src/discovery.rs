@@ -49,10 +49,10 @@ impl<T: TypedTool> Tool for ToolAdapter<T> {
 
     async fn execute_json(&self, input: serde_json::Value) -> crate::Result<serde_json::Value> {
         let typed_input: T::Input = serde_json::from_value(input)
-            .map_err(|e| crate::AppError::InvalidInput(format!("Invalid tool input: {}", e)))?;
+            .map_err(|e| crate::Error::InvalidInput(format!("Invalid tool input: {}", e)))?;
 
         let output = self.0.execute(typed_input).await?;
 
-        serde_json::to_value(output).map_err(crate::AppError::Serde)
+        serde_json::to_value(output).map_err(crate::Error::Serialization)
     }
 }

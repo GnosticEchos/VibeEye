@@ -16,8 +16,8 @@ use tokio::sync::oneshot;
 use tracing::{debug, error, info, trace, warn};
 use url::Url;
 
-use crate::{AppError, Result};
-use vibeeye_core::{VibeError, Viewport};
+use crate::{Error, Result};
+use vibeeye_core::Viewport;
 
 /// Commands sent from the async `BrowserSession` to the dedicated Servo thread.
 pub(crate) enum EngineCommand {
@@ -56,9 +56,9 @@ impl ServoEngine {
     pub fn new(viewport: Viewport) -> Result<Self> {
         let mut possible = SERVO_POSSIBLE.lock().unwrap();
         if !*possible {
-            return Err(AppError::Core(VibeError::Engine(
+            return Err(Error::Browser(
                 "Servo previously failed to initialise".to_string(),
-            )));
+            ));
         }
 
         let (cmd_tx, cmd_rx) = mpsc::channel::<EngineCommand>();
@@ -71,7 +71,7 @@ impl ServoEngine {
                     error!(error = %e, "Servo engine thread failed");
                 }
             })
-            .map_err(|e| VibeError::Engine(format!("failed to spawn engine thread: {e}")))?;
+            .map_err(|e| Error::Browser(format!("failed to spawn engine thread: {e}")))?;
 
         await_ready(ready_rx, &mut possible).map(|()| ServoEngine {
             cmd_tx,
@@ -87,9 +87,9 @@ impl ServoEngine {
                 url: url.to_string(),
                 respond: tx,
             })
-            .map_err(|e| VibeError::Engine(format!("send navigate: {e}")))?;
+            .map_err(|e| Error::Browser(format!("send navigate: {e}")))?;
         rx.await
-            .map_err(|e| VibeError::Engine(format!("recv navigate: {e}")))?
+            .map_err(|e| Error::Browser(format!("recv navigate: {e}")))?
     }
 
     /// Get the current page's raw HTML.
@@ -97,9 +97,9 @@ impl ServoEngine {
         let (tx, rx) = oneshot::channel();
         self.cmd_tx
             .send(EngineCommand::GetHtml { respond: tx })
-            .map_err(|e| VibeError::Engine(format!("send get_html: {e}")))?;
+            .map_err(|e| Error::Browser(format!("send get_html: {e}")))?;
         rx.await
-            .map_err(|e| VibeError::Engine(format!("recv get_html: {e}")))?
+            .map_err(|e| Error::Browser(format!("recv get_html: {e}")))?
     }
 
     /// Get the current page's visible text.
@@ -107,9 +107,9 @@ impl ServoEngine {
         let (tx, rx) = oneshot::channel();
         self.cmd_tx
             .send(EngineCommand::GetText { respond: tx })
-            .map_err(|e| VibeError::Engine(format!("send get_text: {e}")))?;
+            .map_err(|e| Error::Browser(format!("send get_text: {e}")))?;
         rx.await
-            .map_err(|e| VibeError::Engine(format!("recv get_text: {e}")))?
+            .map_err(|e| Error::Browser(format!("recv get_text: {e}")))?
     }
 
     /// Evaluate arbitrary JavaScript in the current page context.
@@ -120,9 +120,9 @@ impl ServoEngine {
                 script: script.to_string(),
                 respond: tx,
             })
-            .map_err(|e| VibeError::Engine(format!("send eval_js: {e}")))?;
+            .map_err(|e| Error::Browser(format!("send eval_js: {e}")))?;
         rx.await
-            .map_err(|e| VibeError::Engine(format!("recv eval_js: {e}")))?
+            .map_err(|e| Error::Browser(format!("recv eval_js: {e}")))?
     }
 
     /// Get all link URLs from the live DOM after JavaScript execution.
@@ -130,9 +130,9 @@ impl ServoEngine {
         let (tx, rx) = oneshot::channel();
         self.cmd_tx
             .send(EngineCommand::GetDomLinks { respond: tx })
-            .map_err(|e| VibeError::Engine(format!("send get_dom_links: {e}")))?;
+            .map_err(|e| Error::Browser(format!("send get_dom_links: {e}")))?;
         rx.await
-            .map_err(|e| VibeError::Engine(format!("recv get_dom_links: {e}")))?
+            .map_err(|e| Error::Browser(format!("recv get_dom_links: {e}")))?
     }
 
     /// Gracefully shut down the engine thread and wait for it to finish.
@@ -170,15 +170,13 @@ fn await_ready(
         Ok(Ok(())) => Ok(()),
         Ok(Err(e)) => {
             *possible = false;
-            Err(AppError::Core(VibeError::Engine(format!(
-                "engine init failed: {e}"
-            ))))
+            Err(Error::Browser(format!("engine init failed: {e}")))
         }
         Err(_) => {
             *possible = false;
-            Err(AppError::Core(VibeError::Engine(
+            Err(Error::Browser(
                 "engine init timed out (no Mesa / display available?)".to_string(),
-            )))
+            ))
         }
     }
 }
@@ -196,12 +194,12 @@ fn run_engine(
 
     let rendering_context: Rc<dyn RenderingContext> = Rc::new(
         SoftwareRenderingContext::new(size)
-            .map_err(|e| VibeError::Engine(format!("SoftwareRenderingContext: {e:?}")))?,
+            .map_err(|e| Error::Browser(format!("SoftwareRenderingContext: {e:?}")))?,
     );
 
     rendering_context
         .make_current()
-        .map_err(|e| VibeError::Engine(format!("make_current: {e:?}")))?;
+        .map_err(|e| Error::Browser(format!("make_current: {e:?}")))?;
 
     let devtools_enabled = std::env::var("VIBEYE_DEVTOOLS").is_ok();
     let preferences = Preferences {
@@ -232,9 +230,7 @@ fn run_engine(
     info!("Servo engine initialized");
 
     if ready.send(Ok(())).is_err() {
-        return Err(AppError::Core(VibeError::Engine(
-            "parent dropped before ready".to_string(),
-        )));
+        return Err(Error::Browser("parent dropped before ready".to_string()));
     }
 
     let mut active_webview: Option<WebView> = None;
@@ -306,7 +302,7 @@ fn navigate_cmd(
     active_webview: &mut Option<WebView>,
     url: &str,
 ) -> Result<String> {
-    let parsed = Url::parse(url).map_err(|e| VibeError::Navigation(format!("invalid URL: {e}")))?;
+    let parsed = Url::parse(url).map_err(|e| Error::Navigation(format!("invalid URL: {e}")))?;
 
     // Drop the old webview before creating a new one so Servo can
     // reclaim DOM, JS heap, and rendering resources. Without this,
@@ -360,7 +356,7 @@ fn navigate_cmd(
 fn get_html_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<String> {
     let webview = active_webview
         .as_ref()
-        .ok_or_else(|| VibeError::Engine("no active webview".to_string()))?;
+        .ok_or_else(|| Error::Browser("no active webview".to_string()))?;
 
     let result = crate::browser::navigation::extract_html(servo, webview)?;
     Ok(result)
@@ -369,7 +365,7 @@ fn get_html_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<Strin
 fn get_text_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<String> {
     let webview = active_webview
         .as_ref()
-        .ok_or_else(|| VibeError::Engine("no active webview".to_string()))?;
+        .ok_or_else(|| Error::Browser("no active webview".to_string()))?;
 
     let result = crate::browser::navigation::extract_text(servo, webview)?;
     Ok(result)
@@ -378,7 +374,7 @@ fn get_text_cmd(servo: &Servo, active_webview: &Option<WebView>) -> Result<Strin
 fn eval_js_cmd(servo: &Servo, active_webview: &Option<WebView>, script: &str) -> Result<String> {
     let webview = active_webview
         .as_ref()
-        .ok_or_else(|| VibeError::Engine("no active webview".to_string()))?;
+        .ok_or_else(|| Error::Browser("no active webview".to_string()))?;
 
     let js_result = crate::browser::navigation::eval_js_with_timeout(
         servo,

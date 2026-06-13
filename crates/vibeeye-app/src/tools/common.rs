@@ -1,7 +1,7 @@
 //! Common tool execution helpers
 
 use crate::browser::BrowserSession;
-use crate::{AppError, Result};
+use crate::{Error, Result};
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -40,23 +40,23 @@ pub async fn navigate_and_capture(url: &str) -> Result<PageCapture> {
         .await
         .unwrap_or_else(|| url.to_string());
 
-    let mut session = BrowserSession::new().map_err(|e| AppError::Browser(e.to_string()))?;
+    let mut session = BrowserSession::new().map_err(|e| Error::Browser(e.to_string()))?;
 
     session
         .navigate(&resolved_url)
         .await
-        .map_err(|e| AppError::Navigation(e.to_string()))?;
+        .map_err(|e| Error::Navigation(e.to_string()))?;
 
     let mut html = session
         .get_html()
         .await
-        .map_err(|e| AppError::Browser(e.to_string()))?;
+        .map_err(|e| Error::Browser(e.to_string()))?;
 
     if html.to_lowercase().contains("<script") {
         html = session
             .settle_and_get_html(2000)
             .await
-            .map_err(|e| AppError::Browser(e.to_string()))?;
+            .map_err(|e| Error::Browser(e.to_string()))?;
     }
 
     let title = crate::extraction::extract_title(&html);

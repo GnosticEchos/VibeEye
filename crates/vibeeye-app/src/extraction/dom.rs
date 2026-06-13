@@ -3,8 +3,7 @@
 //! Uses `html-to-markdown-rs` to parse HTML once and pull out semantic
 //! structures (title, tables, headings hierarchy) without re-parsing.
 
-use crate::{AppError, Result};
-use vibeeye_core::VibeError;
+use crate::{Error, Result};
 
 /// Metadata extracted from an HTML document.
 #[derive(Debug, Default, Clone)]
@@ -18,7 +17,7 @@ pub struct PageMetadata {
 /// Extract metadata from raw HTML.
 pub fn extract_metadata(html: &str) -> Result<PageMetadata> {
     let result = html_to_markdown_rs::convert(html, None)
-        .map_err(|e| AppError::Core(VibeError::Extraction(format!("metadata extraction: {e}"))))?;
+        .map_err(|e| Error::Extraction(format!("metadata extraction: {e}")))?;
 
     let meta = result.metadata.document;
     Ok(PageMetadata {

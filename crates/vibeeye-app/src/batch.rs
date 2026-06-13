@@ -32,7 +32,7 @@ pub async fn run(opts: BatchOptions) -> Result<()> {
     let mut total_success = 0usize;
     let mut total_error = 0usize;
 
-    let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
+    let mut session = BrowserSession::new().map_err(|e| crate::Error::Browser(e.to_string()))?;
 
     for (idx, url) in opts.urls.iter().enumerate() {
         let permit = match semaphore.clone().acquire_owned().await {
@@ -96,7 +96,7 @@ async fn fetch_one(url: &str, session: &mut BrowserSession, opts: &BatchOptions)
             return error_result(
                 url,
                 &opts.format,
-                &crate::AppError::Navigation("timeout".into()),
+                &crate::Error::Navigation("timeout".into()),
             );
         }
     };
@@ -108,7 +108,7 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
     session
         .navigate(url)
         .await
-        .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
+        .map_err(|e| crate::Error::Navigation(e.to_string()))?;
 
     let status_str = session
         .eval_js(
@@ -125,13 +125,13 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
 
     let status_num: u16 = status_str.parse().unwrap_or(200);
     if status_num >= 400 {
-        return Err(crate::AppError::Navigation(format!("HTTP {status_num}")));
+        return Err(crate::Error::Navigation(format!("HTTP {status_num}")));
     }
 
     let mut html = session
         .get_html()
         .await
-        .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+        .map_err(|e| crate::Error::Browser(e.to_string()))?;
 
     if html.to_lowercase().contains("<script") {
         html = settle_and_recapture(session, settle_ms).await?;
@@ -193,10 +193,10 @@ async fn settle_and_recapture(session: &mut BrowserSession, settle_ms: u64) -> R
     session
         .get_html()
         .await
-        .map_err(|e| crate::AppError::Browser(e.to_string()))
+        .map_err(|e| crate::Error::Browser(e.to_string()))
 }
 
-fn error_result(url: &str, format: &ContentFormat, err: &crate::AppError) -> CrawlResult {
+fn error_result(url: &str, format: &ContentFormat, err: &crate::Error) -> CrawlResult {
     let format_str = match format {
         ContentFormat::Markdown => "markdown",
         ContentFormat::Html => "html",

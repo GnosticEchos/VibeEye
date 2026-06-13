@@ -68,7 +68,7 @@ pub struct CrawlResult {
 /// `output_dir`.
 pub async fn run(opts: CrawlOptions) -> Result<()> {
     let base_url = Url::parse(&opts.url)
-        .map_err(|e| crate::AppError::InvalidInput(format!("invalid seed URL: {e}")))?;
+        .map_err(|e| crate::Error::InvalidInput(format!("invalid seed URL: {e}")))?;
 
     let origin = format!(
         "{}://{}",
@@ -85,7 +85,7 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let mut total_successful = 0usize;
     let mut total_errors = 0usize;
 
-    let mut session = BrowserSession::new().map_err(|e| crate::AppError::Browser(e.to_string()))?;
+    let mut session = BrowserSession::new().map_err(|e| crate::Error::Browser(e.to_string()))?;
 
     const EMIT_BATCH_SIZE: usize = 50;
     let emit_semaphore = Arc::new(Semaphore::new(2));
@@ -243,7 +243,7 @@ async fn acquire_permit(semaphore: Arc<Semaphore>) -> Result<tokio::sync::OwnedS
         Ok(p) => Ok(p),
         Err(_) => {
             warn!("semaphore closed unexpectedly, stopping crawl");
-            Err(crate::AppError::InvalidInput("semaphore closed".into()))
+            Err(crate::Error::InvalidInput("semaphore closed".into()))
         }
     }
 }
@@ -279,7 +279,7 @@ async fn fetch_with_session(
     match result {
         Ok(Ok(c)) => Ok(c),
         Ok(Err(e)) => Err(e),
-        Err(_) => Err(crate::AppError::Navigation("timeout".into())),
+        Err(_) => Err(crate::Error::Navigation("timeout".into())),
     }
 }
 
@@ -291,7 +291,7 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
     session
         .navigate(&resolved_url)
         .await
-        .map_err(|e| crate::AppError::Navigation(e.to_string()))?;
+        .map_err(|e| crate::Error::Navigation(e.to_string()))?;
 
     // Check HTTP status via PerformanceNavigationTiming
     let status_str = session
@@ -309,13 +309,13 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
 
     let status_num: u16 = status_str.parse().unwrap_or(200);
     if status_num >= 400 {
-        return Err(crate::AppError::Navigation(format!("HTTP {status_num}")));
+        return Err(crate::Error::Navigation(format!("HTTP {status_num}")));
     }
 
     let mut html = session
         .get_html()
         .await
-        .map_err(|e| crate::AppError::Browser(e.to_string()))?;
+        .map_err(|e| crate::Error::Browser(e.to_string()))?;
 
     if html.to_lowercase().contains("<script") {
         html = session.settle_and_get_html(settle_ms).await?;
@@ -350,12 +350,7 @@ async fn do_fetch(url: &str, session: &mut BrowserSession, settle_ms: u64) -> Re
     })
 }
 
-fn error_result(
-    url: &str,
-    depth: u32,
-    format: &ContentFormat,
-    err: &crate::AppError,
-) -> CrawlResult {
+fn error_result(url: &str, depth: u32, format: &ContentFormat, err: &crate::Error) -> CrawlResult {
     CrawlResult {
         url: url.to_string(),
         depth,
@@ -571,10 +566,10 @@ pub fn build_manifest_entry(result: &CrawlResult, filename: &str) -> serde_json:
 pub async fn write_manifest(dir: &std::path::Path, manifest: &[serde_json::Value]) -> Result<()> {
     let path = dir.join("manifest.json");
     let json = serde_json::to_string_pretty(manifest)
-        .map_err(|e| crate::AppError::InvalidInput(format!("failed to serialize manifest: {e}")))?;
+        .map_err(|e| crate::Error::InvalidInput(format!("failed to serialize manifest: {e}")))?;
     fs::write(&path, json)
         .await
-        .map_err(|e| crate::AppError::InvalidInput(format!("failed to write manifest: {e}")))?;
+        .map_err(|e| crate::Error::InvalidInput(format!("failed to write manifest: {e}")))?;
     Ok(())
 }
 
@@ -794,7 +789,7 @@ mod tests {
 
     #[test]
     fn test_error_result_format() {
-        let err = crate::AppError::Navigation("timeout".to_string());
+        let err = crate::Error::Navigation("timeout".to_string());
         let result = error_result("https://example.com/", 1, &ContentFormat::Markdown, &err);
         assert_eq!(result.url, "https://example.com/");
         assert_eq!(result.depth, 1);

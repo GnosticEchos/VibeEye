@@ -147,7 +147,7 @@ impl CrawlConfig {
             Some(p) => p.to_path_buf(),
             None => {
                 let config_dir = dirs::config_dir().ok_or_else(|| {
-                    crate::AppError::InvalidInput("no config directory found".into())
+                    crate::Error::InvalidInput("no config directory found".into())
                 })?;
                 config_dir.join("vibe-eye").join("crawl.toml")
             }
@@ -158,9 +158,9 @@ impl CrawlConfig {
         }
 
         let content = std::fs::read_to_string(&path)
-            .map_err(|e| crate::AppError::InvalidInput(format!("failed to read config: {e}")))?;
+            .map_err(|e| crate::Error::InvalidInput(format!("failed to read config: {e}")))?;
         let config: CrawlConfig = toml::from_str(&content)
-            .map_err(|e| crate::AppError::InvalidInput(format!("invalid TOML config: {e}")))?;
+            .map_err(|e| crate::Error::InvalidInput(format!("invalid TOML config: {e}")))?;
         Ok(config)
     }
 
@@ -169,7 +169,7 @@ impl CrawlConfig {
     /// Merge order: global → matching domain → matching subdomain.
     pub fn resolve(&self, url: &str) -> Result<CrawlProfile> {
         let parsed = url::Url::parse(url)
-            .map_err(|e| crate::AppError::InvalidInput(format!("invalid URL: {e}")))?;
+            .map_err(|e| crate::Error::InvalidInput(format!("invalid URL: {e}")))?;
         let host = parsed.host_str().unwrap_or("");
 
         let mut profile = self.global.clone();
