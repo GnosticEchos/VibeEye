@@ -2,19 +2,6 @@
 
 # VibeEye
 
-```text                                                                
-              ,,  ,,                                            
-`7MMF'   `7MF'db *MM                `7MM"""YMM                  
-  `MA     ,V      MM                  MM    `7                  
-   VM:   ,V `7MM  MM,dMMb.   .gP"Ya   MM   d `7M'   `MF'.gP"Ya  
-    MM.  M'   MM  MM    `Mb ,M'   Yb  MMmmMM   VA   ,V ,M'   Yb 
-    `MM A'    MM  MM     M8 8M""""""  MM   Y  , VA ,V  8M"""""" 
-     :MM;     MM  MM.   ,M9 YM.    ,  MM     ,M  VVV   YM.    , 
-      VF    .JMML.P^YbmdP'   `Mbmmd'.JMMmmmmMMM  ,V     `Mbmmd' 
-                                                ,V              
-                                             OOb"               
-
-```
 **Headless browser for agentic content extraction — built on Servo**
 
 Give your AI agents clean, current information from any public web page.
