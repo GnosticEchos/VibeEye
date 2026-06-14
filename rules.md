@@ -19,6 +19,15 @@ A Rust-native headless browser for agentic content extraction using Servo.
 - **Memory Constraint**: Active page loads MUST NOT exceed 500MB RAM.
 - **Exit Strategy**: All missions must end with a clean process exit and exit code 0.
 
+## Code Quality & Complexity
+- **Local Guardrail**: Before pushing significant refactors, run `cargo-crap --lcov lcov.info --workspace` locally to identify potential complexity regressions.
+- **Baseline Updates**: If you intentionally refactor a complex function (e.g., splitting a god function) and the baseline needs updating, regenerate it locally before pushing:
+  ```bash
+  cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+  cargo-crap --lcov lcov.info --workspace --exclude '**/tests/**' --format json > .cargo-crap-baseline.json
+  git add .cargo-crap-baseline.json
+  ```
+
 ## Feature Gating
 - **surrealdb feature**: All database operations (persistence, search, import/export).
 - **embeddings feature**: Semantic chunking, embedding generation, vector/hybrid search (implies surrealdb).
