@@ -2,7 +2,7 @@
 
 # VibeEye
 
-                                                                
+```text                                                                
               ,,  ,,                                            
 `7MMF'   `7MF'db *MM                `7MM"""YMM                  
   `MA     ,V      MM                  MM    `7                  
@@ -14,7 +14,7 @@
                                                 ,V              
                                              OOb"               
 
-
+```
 **Headless browser for agentic content extraction — built on Servo**
 
 Give your AI agents clean, current information from any public web page.
