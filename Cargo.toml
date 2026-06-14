@@ -13,7 +13,7 @@ edition = "2024"
 rust-version = "1.86"
 authors = ["VibeEye Contributors"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/vibeeye/vibeeye"
+repository = "https://github.com/GnosticEchos/VibeEye"
 
 [workspace.dependencies]
 # Core async runtime

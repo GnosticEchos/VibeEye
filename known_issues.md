@@ -1,7 +1,7 @@
 # Known Issues
 
 Issues are tracked externally. For the current list of known bugs, limitations, and
-planned improvements, see [GitHub Issues](https://github.com/vibeeye/vibeeye/issues).
+planned improvements, see [GitHub Issues](https://github.com/GnosticEchos/VibeEye/issues).
 
 ## Notable limitations
 

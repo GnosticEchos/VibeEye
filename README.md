@@ -8,7 +8,7 @@ Give your AI agents clean, current information from any public web page.
 
 [![Rust](https://img.shields.io/badge/rust-1.86+-dea584.svg)](https://www.rust-lang.org)
 [![Servo](https://img.shields.io/badge/servo-0.1.0-orange)](https://servo.org)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/vibeeye/vibeeye)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/GnosticEchos/VibeEye)
 [![Built with](https://img.shields.io/badge/built%20with-SurrealDB-ff00a0)](https://surrealdb.com)
 
 </div>
@@ -67,8 +67,8 @@ LLM agents are only as good as the information they can access. VibeEye bridges 
 ### Install
 
 ```bash
-git clone https://github.com/vibeeye/vibeeye
-cd vibeeye
+git clone https://github.com/GnosticEchos/VibeEye.git
+cd VibeEye
 
 # Minimal build — no database, no embeddings
 cargo build --release
