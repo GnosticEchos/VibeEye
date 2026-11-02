@@ -8,6 +8,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ("001_initial", include_str!("001_initial.surql")),
     ("002_add_chunks", include_str!("002_add_chunks.surql")),
     ("003_add_meta", include_str!("003_add_meta.surql")),
+    (
+        "004_analyzer_overwrite",
+        include_str!("004_analyzer_overwrite.surql"),
+    ),
 ];
 
 /// Run all pending migrations in order.

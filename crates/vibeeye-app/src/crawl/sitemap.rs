@@ -48,34 +48,33 @@ fn handle_event(event: Event, in_loc: &mut bool, urls: &mut Vec<String>) -> bool
         return true;
     }
 
-    if is_start_tag(&event, b"loc") {
+    if is_start_tag(&event, "loc") {
         *in_loc = true;
-    } else if is_end_tag(&event, b"loc") {
+    } else if is_end_tag(&event, "loc") {
         *in_loc = false;
     } else if let Event::Text(e) = event {
-        try_extract_url(e, *in_loc, urls);
+        try_extract_url(&e, *in_loc, urls);
     }
 
     false
 }
 
-fn try_extract_url(text: quick_xml::events::BytesText, in_loc: bool, urls: &mut Vec<String>) {
+fn try_extract_url(text: &str, in_loc: bool, urls: &mut Vec<String>) {
     if !in_loc {
         return;
     }
-    let Ok(content) = text.unescape() else { return };
-    let url = content.trim().to_string();
+    let url = text.trim().to_string();
     if !url.is_empty() {
         urls.push(url);
     }
 }
 
-fn is_start_tag(event: &Event, name: &[u8]) -> bool {
-    matches!(event, Event::Start(e) if e.name().as_ref() == name)
+fn is_start_tag(event: &Event, name: &str) -> bool {
+    matches!(event, Event::Start(e) if e.name().0 == name)
 }
 
-fn is_end_tag(event: &Event, name: &[u8]) -> bool {
-    matches!(event, Event::End(e) if e.name().as_ref() == name)
+fn is_end_tag(event: &Event, name: &str) -> bool {
+    matches!(event, Event::End(e) if e.name().0 == name)
 }
 
 #[cfg(test)]

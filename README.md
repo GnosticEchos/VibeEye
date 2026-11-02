@@ -6,8 +6,8 @@
 
 Give your AI agents clean, current information from any public web page.
 
-[![Rust](https://img.shields.io/badge/rust-1.86+-dea584.svg)](https://www.rust-lang.org)
-[![Servo](https://img.shields.io/badge/servo-0.1.0-orange)](https://servo.org)
+[![Rust](https://img.shields.io/badge/rust-1.88+-dea584.svg)](https://www.rust-lang.org)
+[![Servo](https://img.shields.io/badge/servo-0.7.0-orange)](https://servo.org)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/GnosticEchos/VibeEye)
 [![Built with](https://img.shields.io/badge/built%20with-SurrealDB-ff00a0)](https://surrealdb.com)
 
@@ -58,13 +58,15 @@ LLM agents are only as good as the information they can access. VibeEye bridges 
 
 ### Prerequisites
 
-- **Rust 1.86+** (`rustup upgrade` if needed)
+- **Rust 1.88+** (`rustup upgrade` if needed)
 - **SurrealDB** (optional) — standalone server, or use embedded SurrealKV (`surrealkv://`)
 - **Embedding server** (optional) — Ollama, llama.cpp, or FLM for semantic search
 
 > **No built-in authentication.** Only publicly accessible content is supported. Pages behind logins cannot be crawled.
 
 ### Install
+
+> **Setting up a native Linux desktop/workstation?** See [**INSTALL.md**](INSTALL.md) for a complete non-container guide covering `~/.local/bin` installation, `systemd --user` services for SurrealDB and Ollama (`qwen3-embedding:0.6b`), and end-to-end verification.
 
 ```bash
 git clone https://github.com/GnosticEchos/VibeEye.git
@@ -575,7 +577,7 @@ Two-phase retrieval:
 ## Known limitations
 
 - **Authentication:** No built-in support for login forms, cookies, or session-based auth. Only public pages.
-- **Servo alpha quality:** Servo 0.1.0 is pre-1.0. Some sites may render differently than Chromium. SpiderMonkey has a global mutex destructor that can segfault on normal process exit — VibeEye mitigates this with `libc::_exit(0)`.
+- **Servo alpha quality:** Servo 0.7.0 is pre-1.0. Some sites may render differently than Chromium. The engine now decouples WebGL from default features, eliminating headless WebGL panics. SpiderMonkey has a global mutex destructor that can segfault on normal process exit — VibeEye mitigates this with `libc::_exit(0)`.
 - **SPA edge cases:** Some client-side routing patterns (Astro partial hydration, heavy WASM) may not settle properly. Known issue: SurrealDB docs crawl misses sub-pages.
 - **Anti-bot protection:** Sites like GitHub may return JS-gated or rate-limited content. 0 chunks from GitHub crawls is expected.
 - **Memory:** Each browser session loads a full Servo instance. OOM on long crawls is mitigated by dropping the WebView between pages.
@@ -651,6 +653,7 @@ at your option.
 vibeeye/
 ├── Cargo.toml                    # Workspace root
 ├── README.md                     # This file
+├── INSTALL.md                    # Native Linux (non-container) installation & systemd guide
 ├── ARCHITECTURE.md               # System architecture, pipeline flows, contracts
 ├── crawl.example.toml            # Example config with all options documented
 ├── known_issues.md               # Known bugs and investigation notes

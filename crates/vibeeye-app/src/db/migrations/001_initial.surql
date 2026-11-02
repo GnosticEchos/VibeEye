@@ -16,7 +16,7 @@ DEFINE INDEX idx_url_group ON page FIELDS url, group UNIQUE;
 DEFINE INDEX idx_page_group ON page FIELDS group;
 
 -- Analyzer for documentation text
-DEFINE ANALYZER doc_analyzer
+DEFINE ANALYZER OVERWRITE doc_analyzer
     TOKENIZERS BLANK,CLASS,CAMEL
     FILTERS LOWERCASE,SNOWBALL(ENGLISH);
 

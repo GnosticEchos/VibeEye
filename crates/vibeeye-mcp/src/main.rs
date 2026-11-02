@@ -3,13 +3,10 @@ mod tools;
 
 use handler::VibeEyeMcpHandler;
 use rust_mcp_sdk::{
-    McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
+    McpServer, ServerDetails, StdioTransport, ToMcpServerHandler, TransportOptions,
     error::SdkResult,
     mcp_server::{McpServerOptions, ServerRuntime, server_runtime},
-    schema::{
-        Implementation, InitializeResult, ProtocolVersion, ServerCapabilities,
-        ServerCapabilitiesTools,
-    },
+    schema::{Implementation, ServerCapabilities, ServerCapabilitiesTools},
 };
 use std::sync::Arc;
 use tracing::info;
@@ -19,7 +16,7 @@ async fn main() -> SdkResult<()> {
     tracing_subscriber::fmt::init();
     info!("VibeEye MCP Server starting...");
 
-    let server_details = InitializeResult {
+    let server_details = ServerDetails {
         server_info: Implementation {
             name: "vibeeye-mcp".into(),
             version: env!("CARGO_PKG_VERSION").into(),
@@ -32,9 +29,8 @@ async fn main() -> SdkResult<()> {
             tools: Some(ServerCapabilitiesTools { list_changed: None }),
             ..Default::default()
         },
-        meta: None,
         instructions: None,
-        protocol_version: ProtocolVersion::V2025_11_25.into(),
+        meta: None,
     };
 
     let transport = StdioTransport::new(TransportOptions::default())?;
@@ -58,8 +54,6 @@ async fn main() -> SdkResult<()> {
         server_details,
         transport,
         handler: handler.to_mcp_server_handler(),
-        task_store: None,
-        client_task_store: None,
         message_observer: None,
     });
 

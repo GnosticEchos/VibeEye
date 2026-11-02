@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use rust_mcp_sdk::{
-    McpServer,
+    McpServer, RequestContext,
     mcp_server::ServerHandler,
     schema::{
         CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, RpcError,
@@ -47,7 +47,8 @@ impl VibeEyeMcpHandler {
 impl ServerHandler for VibeEyeMcpHandler {
     async fn handle_list_tools_request(
         &self,
-        _request: Option<PaginatedRequestParams>,
+        _params: Option<PaginatedRequestParams>,
+        _context: &RequestContext,
         _runtime: Arc<dyn McpServer>,
     ) -> std::result::Result<ListToolsResult, RpcError> {
         let registry = ToolRegistry::new();
@@ -84,31 +85,38 @@ impl ServerHandler for VibeEyeMcpHandler {
         }
 
         Ok(ListToolsResult {
+            cache_scope: rust_mcp_sdk::schema::ListToolsResultCacheScope::Public,
             meta: None,
             next_cursor: None,
+            result_type: "complete".to_string(),
             tools,
+            ttl_ms: 0,
         })
     }
 
     async fn handle_call_tool_request(
         &self,
         params: CallToolRequestParams,
+        _context: &RequestContext,
         _runtime: Arc<dyn McpServer>,
-    ) -> std::result::Result<CallToolResult, CallToolError> {
+    ) -> std::result::Result<rust_mcp_sdk::schema::ServerResult, CallToolError> {
         let arguments = params.arguments.unwrap_or_default();
         let name = params.name.as_str();
-        if name.starts_with("browser_") {
-            dispatch_browser(name, arguments).await
+        let result = if name.starts_with("browser_") {
+            dispatch_browser(name, arguments).await?
         } else if name.starts_with("db_") {
-            dispatch_db(self, name, arguments).await
+            dispatch_db(self, name, arguments).await?
         } else if name == "crawl" {
             #[cfg(feature = "surrealdb")]
-            return self.call_crawl(arguments).await;
+            {
+                self.call_crawl(arguments).await?
+            }
             #[cfg(not(feature = "surrealdb"))]
             return Err(CallToolError::unknown_tool(params.name));
         } else {
-            Err(CallToolError::unknown_tool(params.name))
-        }
+            return Err(CallToolError::unknown_tool(params.name));
+        };
+        Ok(result.into())
     }
 }
 

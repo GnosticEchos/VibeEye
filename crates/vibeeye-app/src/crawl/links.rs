@@ -11,10 +11,10 @@ pub fn extract_links(html: &str, base_url: &Url) -> Vec<String> {
 
     let mut links = Vec::new();
     for element in document.select(&selector) {
-        if let Some(href) = element.value().attr("href") {
-            if let Some(absolute) = resolve_link(href, base_url) {
-                links.push(absolute);
-            }
+        if let Some(href) = element.value().attr("href")
+            && let Some(absolute) = resolve_link(href, base_url)
+        {
+            links.push(absolute);
         }
     }
     links

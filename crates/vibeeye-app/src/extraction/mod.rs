@@ -88,25 +88,30 @@ pub fn strip_html(html: &str) -> String {
 fn remove_nav_and_analytics_noise(text: &str) -> String {
     let mut cleaned = text.to_string();
 
-    if let Some(idx) = cleaned.find("Edit page") {
-        if let Some(prev_idx) = cleaned[idx..].find("Previous") {
-            cleaned.truncate(idx + prev_idx);
-        }
+    if let Some(idx) = cleaned.find("Edit page")
+        && let Some(prev_idx) = cleaned[idx..].find("Previous")
+    {
+        cleaned.truncate(idx + prev_idx);
     }
 
-    if let Some(helpful_idx) = cleaned.find("Was this page helpful") {
-        if let Some(prev_idx) = cleaned[helpful_idx..].find("Previous") {
-            cleaned.truncate(helpful_idx + prev_idx);
-        }
+    if let Some(helpful_idx) = cleaned.find("Was this page helpful")
+        && let Some(prev_idx) = cleaned[helpful_idx..].find("Previous")
+    {
+        cleaned.truncate(helpful_idx + prev_idx);
     }
 
     for pattern in ["analytics.twitter.com", "t.co/1/i/adsct", "analytics."] {
         while let Some(start) = cleaned.find(pattern) {
             let end = cleaned[start..]
                 .find(')')
-                .map(|i| start + i)
+                .map(|i| start + i + 1) // +1 to include the ')'
                 .unwrap_or(cleaned.len());
-            cleaned.replace_range(start..=end, "");
+            // Use exclusive range to avoid panic when end == cleaned.len()
+            if start < end && end <= cleaned.len() {
+                cleaned.replace_range(start..end, "");
+            } else {
+                break; // Safety: avoid infinite loop if pattern at end
+            }
         }
     }
 

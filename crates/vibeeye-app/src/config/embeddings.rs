@@ -55,10 +55,10 @@ impl EmbeddingConfig {
     /// If `endpoints` is set, returns those; otherwise returns a single-element
     /// vec containing `endpoint`.
     pub fn endpoints(&self) -> Vec<String> {
-        if let Some(eps) = &self.endpoints {
-            if !eps.is_empty() {
-                return eps.clone();
-            }
+        if let Some(eps) = &self.endpoints
+            && !eps.is_empty()
+        {
+            return eps.clone();
         }
         vec![self.endpoint.clone()]
     }
@@ -93,14 +93,14 @@ pub fn interpolate_env_vars(value: &str) -> String {
 fn replace_braced_vars(value: &str) -> String {
     let mut result = value.to_string();
     loop {
-        if let Some(start) = result.find("${") {
-            if let Some(end) = result[start..].find('}') {
-                let var_name = &result[start + 2..start + end];
-                let full = &result[start..start + end + 1];
-                let replacement = std::env::var(var_name).unwrap_or_default();
-                result = result.replacen(full, &replacement, 1);
-                continue;
-            }
+        if let Some(start) = result.find("${")
+            && let Some(end) = result[start..].find('}')
+        {
+            let var_name = &result[start + 2..start + end];
+            let full = &result[start..start + end + 1];
+            let replacement = std::env::var(var_name).unwrap_or_default();
+            result = result.replacen(full, &replacement, 1);
+            continue;
         }
         break;
     }

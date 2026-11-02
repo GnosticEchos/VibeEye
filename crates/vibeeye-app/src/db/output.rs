@@ -87,10 +87,10 @@ impl crate::crawl::output::CrawlOutput for SurrealOutput {
         }
 
         #[cfg(feature = "embeddings")]
-        if let Some(config) = &self.embed_config {
-            if let Err(e) = self.embed_and_index(results, &page_ids, config).await {
-                eprintln!("ERROR: embedding post-processing failed: {}", e);
-            }
+        if let Some(config) = &self.embed_config
+            && let Err(e) = self.embed_and_index(results, &page_ids, config).await
+        {
+            eprintln!("ERROR: embedding post-processing failed: {}", e);
         }
 
         Ok(())
@@ -191,13 +191,13 @@ impl SurrealOutput {
             .iter()
             .map(|e| e.chunk_text.clone())
             .collect();
-        if let Ok(embeddings) = provider.embed_batch(&probe_texts).await {
-            if let Some(first_emb) = embeddings.first() {
-                let d = first_emb.len();
-                self.client.ensure_embeddings_index(d).await?;
-                tracing::info!(dimension = d, "auto-detected embedding dimension");
-                return Ok(Some(d));
-            }
+        if let Ok(embeddings) = provider.embed_batch(&probe_texts).await
+            && let Some(first_emb) = embeddings.first()
+        {
+            let d = first_emb.len();
+            self.client.ensure_embeddings_index(d).await?;
+            tracing::info!(dimension = d, "auto-detected embedding dimension");
+            return Ok(Some(d));
         }
         Ok(None)
     }

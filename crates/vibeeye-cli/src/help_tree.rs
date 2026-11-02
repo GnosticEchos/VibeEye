@@ -466,10 +466,10 @@ fn collect_subcommands(
     depth: usize,
     omit_help_tree_flags: bool,
 ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
-    if let Some(limit) = depth_limit {
-        if depth >= limit {
-            return Ok(Vec::new());
-        }
+    if let Some(limit) = depth_limit
+        && depth >= limit
+    {
+        return Ok(Vec::new());
     }
 
     let mut subcommands = Vec::new();

@@ -27,21 +27,15 @@ impl DbClient {
         // automatically authenticate using URL credentials.
         if let Ok(parsed) = url::Url::parse(url) {
             let scheme = parsed.scheme();
-            if matches!(scheme, "ws" | "wss" | "http" | "https") {
-                if let Some(password) = parsed.password() {
-                    let username = if parsed.username().is_empty() {
-                        None
-                    } else {
-                        Some(parsed.username())
-                    };
-                    if let Some(username) = username {
-                        db.signin(Root {
-                            username: username.to_owned(),
-                            password: password.to_owned(),
-                        })
-                        .await?;
-                    }
-                }
+            if matches!(scheme, "ws" | "wss" | "http" | "https")
+                && let Some(password) = parsed.password()
+                && let Some(username) = (!parsed.username().is_empty()).then_some(parsed.username())
+            {
+                db.signin(Root {
+                    username: username.to_owned(),
+                    password: password.to_owned(),
+                })
+                .await?;
             }
         }
 

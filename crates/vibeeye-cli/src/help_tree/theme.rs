@@ -132,12 +132,11 @@ pub fn style_text(text: &str, token: &TextTokenTheme, opts: &HelpTreeOpts) -> St
         }
     }
 
-    if should_use_color(opts) {
-        if let Some(hex) = token.color_hex.as_deref() {
-            if let Some((r, g, b)) = parse_hex_rgb(hex) {
-                codes.push(format!("38;2;{r};{g};{b}"));
-            }
-        }
+    if should_use_color(opts)
+        && let Some(hex) = token.color_hex.as_deref()
+        && let Some((r, g, b)) = parse_hex_rgb(hex)
+    {
+        codes.push(format!("38;2;{r};{g};{b}"));
     }
 
     if codes.is_empty() {

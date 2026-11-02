@@ -42,10 +42,10 @@ fn render_command_text(
     prefix: &str,
     opts: &HelpTreeOpts,
 ) {
-    if let Some(limit) = depth_limit {
-        if depth > limit {
-            return;
-        }
+    if let Some(limit) = depth_limit
+        && depth > limit
+    {
+        return;
     }
     if ignore.contains(cmd.get_name()) {
         return;
@@ -144,13 +144,12 @@ pub(crate) fn format_flag_line(arg: &clap::Arg, prefix: &str, opts: &HelpTreeOpt
     let value_names = arg.get_value_names();
     let has_value = arg.get_value_hint() != clap::ValueHint::Unknown
         || arg.get_num_args().is_some_and(|n| n.min_values() > 0);
-    if has_value {
-        if let Some(names) = value_names {
-            if let Some(name) = names.iter().next() {
-                let value = style_text(&format!(" <{name}>"), &opts.theme.options, opts);
-                line.push_str(&value);
-            }
-        }
+    if has_value
+        && let Some(names) = value_names
+        && let Some(name) = names.iter().next()
+    {
+        let value = style_text(&format!(" <{name}>"), &opts.theme.options, opts);
+        line.push_str(&value);
     }
 
     let desc = arg.get_help().map(|h| h.to_string()).unwrap_or_default();

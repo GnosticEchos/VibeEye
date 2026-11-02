@@ -323,6 +323,7 @@ Key-value store for schema version tracking and other metadata.
 | `001_initial` | Create `page` + `discovered` + BM25 index + `doc_analyzer` |
 | `002_add_chunks` | Create `chunk` + `db_metadata` + chunk indexes |
 | `003_add_meta` | Add `meta FLEXIBLE` field to `page` table |
+| `004_analyzer_overwrite` | Ensure `doc_analyzer` is repaired on existing databases (idempotent via OVERWRITE) |
 
 ---
 

@@ -221,12 +221,11 @@ impl BrowserSession {
 
 impl Drop for BrowserSession {
     fn drop(&mut self) {
-        if let Some(engine) = self.engine.take() {
-            if let Some(mutex) = GLOBAL_ENGINE.get() {
-                if let Ok(mut guard) = mutex.lock() {
-                    *guard = Some(engine);
-                }
-            }
+        if let Some(engine) = self.engine.take()
+            && let Some(mutex) = GLOBAL_ENGINE.get()
+            && let Ok(mut guard) = mutex.lock()
+        {
+            *guard = Some(engine);
         }
     }
 }
