@@ -324,7 +324,8 @@ impl DbClient {
         Ok(())
     }
 
-    /// Vector similarity search over chunks (brute-force cosine; avoids SurrealDB KNN operator bug).
+    /// Vector similarity search over chunks using HNSW index.
+    /// Uses SurrealDB 4.0's KNN operator for fast approximate nearest neighbor search.
     pub async fn knn_search(
         &self,
         group: Option<&str>,
@@ -529,17 +530,23 @@ impl DbClient {
         }
     }
 
-    fn vector_chunk_sql(limit: usize, alias: &str, where_clause: &str) -> String {
+    /// Build KNN SQL query using HNSW index.
+    /// Uses SurrealDB 4.0's `<|K, EF|>` operator for approximate nearest neighbor search.
+    fn knn_chunk_sql(limit: usize, ef: usize, alias: &str, additional_conditions: &[&str]) -> String {
+        let conditions = if additional_conditions.is_empty() {
+            String::new()
+        } else {
+            format!(" AND {}", additional_conditions.join(" AND "))
+        };
         format!(
             "SELECT page.url AS page_url, page.title AS page_title,
              chunk_text, heading_path, chunk_index,
-             vector::similarity::cosine(embedding, $embedding) AS {alias}
-             FROM chunk {where_clause}
-             ORDER BY {alias} DESC LIMIT {limit}"
+             vector::distance::knn() AS {alias}
+             FROM chunk WHERE embedding <|{limit}, {ef}|> $embedding{conditions}"
         )
     }
 
-    /// Build and execute a vector similarity query over chunks.
+    /// Build and execute a KNN vector similarity query over chunks using HNSW index.
     /// If `page_urls` is Some, restricts to chunks from those pages.
     async fn vector_chunk_query(
         &self,
@@ -548,44 +555,36 @@ impl DbClient {
         limit: usize,
         page_urls: Option<Vec<String>>,
     ) -> Result<Vec<serde_json::Value>> {
-        let dimension = embedding.len() as i32;
-        let (sql, group_bind, page_urls_bind) = Self::build_vector_query(group, limit, page_urls);
-        let mut q = self
-            .query(sql)
-            .bind(("embedding", embedding.to_vec()))
-            .bind(("dimension", dimension));
-        if let Some(g) = group_bind {
-            q = q.bind(("group", g));
-        }
-        if let Some(urls) = page_urls_bind {
-            q = q.bind(("urls", urls));
-        }
-        let mut response = q.await?;
-        let raw: Vec<serde_json::Value> = response.take(0)?;
-        Ok(raw)
-    }
-
-    fn build_vector_query(
-        group: Option<&str>,
-        limit: usize,
-        page_urls: Option<Vec<String>>,
-    ) -> (String, Option<String>, Option<Vec<String>>) {
         let alias = if page_urls.is_some() {
             "vector_score"
         } else {
             "score"
         };
-        let mut conditions = vec!["dimensions = $dimension"];
+
+        // EF (search effort) - higher = more accurate but slower
+        // 40 is a good default; 17 is fast but may miss results
+        let ef = 40;
+
+        let mut conditions = Vec::new();
         if group.is_some() {
             conditions.push("group = $group");
         }
         if page_urls.is_some() {
             conditions.push("page.url IN $urls");
         }
-        let where_clause = format!("WHERE {}", conditions.join(" AND "));
-        let sql = Self::vector_chunk_sql(limit, alias, &where_clause);
-        let group_bind = group.map(|g| g.to_string());
-        (sql, group_bind, page_urls)
+
+        let sql = Self::knn_chunk_sql(limit, ef, alias, &conditions);
+        
+        let mut q = self.query(&sql).bind(("embedding", embedding.to_vec()));
+        if let Some(g) = group {
+            q = q.bind(("group", g.to_string()));
+        }
+        if let Some(urls) = page_urls {
+            q = q.bind(("urls", urls));
+        }
+        let mut response = q.await?;
+        let raw: Vec<serde_json::Value> = response.take(0)?;
+        Ok(raw)
     }
 
     /// Ensure the HNSW vector index matches the expected dimension.
