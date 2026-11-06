@@ -94,13 +94,17 @@ pub enum Commands {
         #[arg(long, value_name = "FILE")]
         config: Option<PathBuf>,
 
-        /// Maximum crawl depth
+        /// Maximum crawl depth (omit for unlimited)
         #[arg(long)]
         max_depth: Option<u32>,
 
-        /// Maximum pages to crawl (0 = unlimited)
+        /// Maximum pages to crawl (omit for unlimited)
         #[arg(long)]
         max_pages: Option<usize>,
+
+        /// Maximum URLs to discover (omit for unlimited)
+        #[arg(long)]
+        max_discovered_urls: Option<usize>,
 
         /// Output format: markdown, html, or text
         #[arg(short, long)]

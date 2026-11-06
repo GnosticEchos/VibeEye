@@ -25,16 +25,17 @@ pub mod validator;
 
 pub use links::{extract_links, is_same_origin, normalize_url};
 
-/// Maximum discovered URLs before we stop enqueuing new ones.
-const MAX_DISCOVERED_URLS: usize = 5000;
-
 /// Options that drive a crawl job.
 #[derive(Debug, Clone)]
 pub struct CrawlOptions {
     pub url: String,
     pub seed_urls: Vec<String>,
-    pub max_depth: u32,
-    pub max_pages: usize,
+    /// Maximum crawl depth (None = unlimited).
+    pub max_depth: Option<u32>,
+    /// Maximum pages to crawl (None = unlimited).
+    pub max_pages: Option<usize>,
+    /// Maximum URLs to discover before stopping (None = unlimited).
+    pub max_discovered_urls: Option<usize>,
     pub format: ContentFormat,
     pub respect_robots: bool,
     pub requests_per_second: f64,
@@ -92,11 +93,10 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
     let mut emit_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
     while let Some((url, depth)) = queue.pop_front() {
-        if opts.max_pages > 0 && total_crawled >= opts.max_pages {
-            info!(
-                "reached max_pages limit ({}) — stopping crawl",
-                opts.max_pages
-            );
+        if let Some(max) = opts.max_pages
+            && total_crawled >= max
+        {
+            info!("reached max_pages limit ({}) — stopping crawl", max);
             break;
         }
         if !should_crawl_page(depth, &url, &robots, &opts) {
@@ -181,7 +181,7 @@ async fn build_queue(
         for url in sitemap::fetch_sitemap(origin).await {
             let normalized = normalize_url(&url);
             if !visited.contains(&normalized)
-                && (opts.max_pages == 0 || visited.len() < opts.max_pages)
+                && opts.max_pages.is_none_or(|max| visited.len() < max)
             {
                 visited.insert(normalized.clone());
                 queue.push_back((normalized, 0));
@@ -221,7 +221,9 @@ fn should_crawl_page(
     robots: &robots::RobotsTxt,
     opts: &CrawlOptions,
 ) -> bool {
-    if depth > opts.max_depth {
+    if let Some(max_depth) = opts.max_depth
+        && depth > max_depth
+    {
         return false;
     }
     !robots_blocks(robots, url)
@@ -374,7 +376,9 @@ fn enqueue_discovered(
     visited: &mut HashSet<String>,
     queue: &mut VecDeque<(String, u32)>,
 ) {
-    if depth >= opts.max_depth {
+    if let Some(max_depth) = opts.max_depth
+        && depth >= max_depth
+    {
         return;
     }
     let links = extract_links(html, base_url);
@@ -389,7 +393,9 @@ fn enqueue_discovered_links(
     visited: &mut HashSet<String>,
     queue: &mut VecDeque<(String, u32)>,
 ) {
-    if depth >= opts.max_depth {
+    if let Some(max_depth) = opts.max_depth
+        && depth >= max_depth
+    {
         return;
     }
     for link in links {
@@ -397,7 +403,11 @@ fn enqueue_discovered_links(
             continue;
         }
         let normalized = normalize_url(link);
-        if !visited.contains(&normalized) && visited.len() < MAX_DISCOVERED_URLS {
+        let can_enqueue = !visited.contains(&normalized)
+            && opts
+                .max_discovered_urls
+                .is_none_or(|max| visited.len() < max);
+        if can_enqueue {
             visited.insert(normalized.clone());
             queue.push_back((normalized, depth + 1));
         }
@@ -598,8 +608,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,
@@ -626,8 +637,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: true,
             requests_per_second: 100.0,
@@ -665,8 +677,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,
@@ -703,8 +716,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,
@@ -732,8 +746,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,
@@ -765,8 +780,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,
@@ -857,8 +873,9 @@ mod tests {
         let opts = CrawlOptions {
             url: "https://example.com".to_string(),
             seed_urls: vec![],
-            max_depth: 2,
-            max_pages: 10,
+            max_depth: Some(2),
+            max_pages: Some(10),
+            max_discovered_urls: None,
             format: ContentFormat::Markdown,
             respect_robots: false,
             requests_per_second: 100.0,

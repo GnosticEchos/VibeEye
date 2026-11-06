@@ -1,10 +1,16 @@
 //! Format query results for CLI output.
+//!
+//! Utilities for formatting SurrealDB query results as JSON, tables, or markdown.
+//! Currently used by tests but available for future CLI output formatting.
 
 use crate::cli::OutputFormat;
 
+#[allow(dead_code)]
 const TABLE_CELL_MAX: usize = 500;
+#[allow(dead_code)]
 const MARKDOWN_CELL_MAX: usize = 2_000;
 
+#[allow(dead_code)]
 pub fn format_value(value: &serde_json::Value, format: OutputFormat) -> String {
     match format {
         OutputFormat::Json => serde_json::to_string_pretty(value).unwrap_or_default(),
@@ -13,6 +19,7 @@ pub fn format_value(value: &serde_json::Value, format: OutputFormat) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn format_table(value: &serde_json::Value) -> String {
     use comfy_table::Table;
 
@@ -109,6 +116,7 @@ fn format_markdown_object(obj: &serde_json::Map<String, serde_json::Value>) -> S
     out
 }
 
+#[allow(dead_code)]
 fn truncate_string(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         return s.to_string();
@@ -122,6 +130,7 @@ fn truncate_string(s: &str, max: usize) -> String {
     format!("{}...", &s[..end])
 }
 
+#[allow(dead_code)]
 fn format_cell(value: &serde_json::Value) -> String {
     format_cell_with_limit(value, TABLE_CELL_MAX)
 }

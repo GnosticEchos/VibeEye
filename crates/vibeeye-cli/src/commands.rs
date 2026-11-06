@@ -53,6 +53,7 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
             config,
             max_depth,
             max_pages,
+            max_discovered_urls,
             format,
             output,
             urls_file,
@@ -74,6 +75,7 @@ async fn handle_complex_command(command: Commands) -> Result<()> {
                 config,
                 max_depth,
                 max_pages,
+                max_discovered_urls,
                 format,
                 output,
                 urls_file,
@@ -173,6 +175,7 @@ async fn crawl_command(
     config_path: Option<PathBuf>,
     max_depth: Option<u32>,
     max_pages: Option<usize>,
+    max_discovered_urls: Option<usize>,
     format: Option<String>,
     output: Option<PathBuf>,
     urls_file: Option<PathBuf>,
@@ -210,6 +213,7 @@ async fn crawl_command(
         seed_urls,
         max_depth,
         max_pages,
+        max_discovered_urls,
         content_format,
         respect_robots,
         requests_per_second,
@@ -356,6 +360,7 @@ fn build_crawl_options(
     seed_urls: Vec<String>,
     max_depth: Option<u32>,
     max_pages: Option<usize>,
+    max_discovered_urls: Option<usize>,
     content_format: ContentFormat,
     respect_robots: Option<bool>,
     requests_per_second: Option<f64>,
@@ -380,18 +385,12 @@ fn build_crawl_options(
         embed,
     );
 
-    let effective_max_pages = max_pages.or(profile.max_pages).unwrap_or(100);
-    if max_pages.is_none() && profile.max_pages.is_none() {
-        eprintln!(
-            "⚠️  Using default max-pages=100. Use --max-pages 0 for unlimited, or set max_pages in ~/.config/vibe-eye/crawl.toml"
-        );
-    }
-
     CrawlOptions {
         url,
         seed_urls,
-        max_depth: max_depth.or(profile.max_depth).unwrap_or(2),
-        max_pages: effective_max_pages,
+        max_depth,
+        max_pages,
+        max_discovered_urls,
         format: content_format,
         respect_robots: respect_robots.or(profile.respect_robots).unwrap_or(false),
         requests_per_second: requests_per_second

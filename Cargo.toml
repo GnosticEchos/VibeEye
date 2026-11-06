@@ -67,7 +67,7 @@ async-trait = "0.1.92"
 schemars = { version = "1.2.3", features = ["chrono04"] }
 
 # Database
-surrealdb = { version = "=3.3.4", default-features = false, features = ["kv-mem", "kv-surrealkv", "protocol-ws", "protocol-http"] }
+surrealdb = { version = "4.0.0", default-features = false, features = ["kv-mem", "kv-surrealkv", "protocol-ws", "protocol-http"] }
 
 # Embeddings & progress
 indicatif = "0.18.6"
@@ -79,3 +79,7 @@ vibeeye-core = { path = "crates/vibeeye-core" }
 vibeeye-app = { path = "crates/vibeeye-app" }
 
 
+
+# Increase stack size for tests (SurrealDB in-memory can be stack-heavy)
+[profile.test]
+opt-level = 1

@@ -17,7 +17,12 @@
 .gitnexus
 plan.txt
 lcov.info
-
+.agents/
+.crush/
+.kiro/
+.mux/
+skills-lock.json
+lcov.info
 #Ignore Surreals History File
 history.txt
 
