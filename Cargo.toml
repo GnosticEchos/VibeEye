@@ -27,7 +27,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 
 # Browser engine (constrained by spec C-01)
-servo = { version = "0.7.0", features = ["webcrypto", "brotli-compression-stream"] }
+servo = { version = "0.8.0", features = ["subtlecrypto", "brotli-compression-stream"] }
 url = "2.5"
 dpi = "0.1"
 rustls = { version = "0.23.46", default-features = false, features = ["ring"] }
