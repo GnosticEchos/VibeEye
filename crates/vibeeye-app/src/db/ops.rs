@@ -52,61 +52,27 @@ fn extract_match_snippet(content: &str, query: &str, max_len: usize) -> String {
 impl DbClient {
     /// Insert or update a crawled page record.
     ///
-    /// SurrealDB v3 UPSERT over WebSocket returns empty results with parameter
-    /// binding, so we SELECT first, then CREATE or UPDATE.
+    /// Uses INSERT ... ON DUPLICATE KEY UPDATE for idempotent upserts.
+    /// The unique index `idx_url_group` ensures no duplicates on retry.
     pub async fn insert_page(&self, record: &PageRecord) -> Result<surrealdb::types::RecordId> {
-        if let Some(id) = self.find_page_id(&record.url, &record.group).await? {
-            self.update_page(id.clone(), record).await?;
-            return Ok(id);
-        }
-        self.create_page(record).await
-    }
-
-    /// Look up an existing page record by URL and group.
-    async fn find_page_id(
-        &self,
-        url: &str,
-        group: &str,
-    ) -> Result<Option<surrealdb::types::RecordId>> {
-        let mut result = self
-            .query("SELECT id FROM page WHERE url = $url AND `group` = $group LIMIT 1")
-            .bind(("url", url.to_string()))
-            .bind(("group", group.to_string()))
-            .await?;
-        let raw: Vec<serde_json::Value> = result.take(0)?;
-        Ok(raw.into_iter().next().and_then(|v| {
-            let id_str = v["id"].as_str()?;
-            surrealdb::types::RecordId::parse_simple(id_str).ok()
-        }))
-    }
-
-    /// Update an existing page record.
-    async fn update_page(&self, id: surrealdb::types::RecordId, record: &PageRecord) -> Result<()> {
-        self.query(
-            "UPDATE $id SET `group` = $group, url = $url, title = $title,
-             content = $content, depth = $depth, format = $format,
-             crawled_at = $crawled_at, meta = $meta",
-        )
-        .bind(("id", id))
-        .bind(("group", record.group.clone()))
-        .bind(("url", record.url.clone()))
-        .bind(("title", record.title.clone()))
-        .bind(("content", record.content.clone()))
-        .bind(("depth", record.depth))
-        .bind(("format", record.format.clone()))
-        .bind(("crawled_at", record.crawled_at))
-        .bind(("meta", record.meta.clone()))
-        .await?;
-        Ok(())
-    }
-
-    /// Create a new page record.
-    async fn create_page(&self, record: &PageRecord) -> Result<surrealdb::types::RecordId> {
         let mut result = self
             .query(
-                "CREATE page SET `group` = $group, url = $url, title = $title,
-                 content = $content, depth = $depth, format = $format,
-                 crawled_at = $crawled_at, meta = $meta",
+                "INSERT INTO page [{
+                    group: $group,
+                    url: $url,
+                    title: $title,
+                    content: $content,
+                    depth: $depth,
+                    format: $format,
+                    crawled_at: $crawled_at,
+                    meta: $meta
+                }] ON DUPLICATE KEY UPDATE
+                    title = $title,
+                    content = $content,
+                    depth = $depth,
+                    format = $format,
+                    crawled_at = $crawled_at,
+                    meta = $meta",
             )
             .bind(("group", record.group.clone()))
             .bind(("url", record.url.clone()))
@@ -122,10 +88,61 @@ impl DbClient {
             .next()
             .and_then(|v| {
                 let id_str = v["id"].as_str()?;
-                let id = surrealdb::types::RecordId::parse_simple(id_str).ok()?;
-                Some(id)
+                surrealdb::types::RecordId::parse_simple(id_str).ok()
             })
-            .ok_or_else(|| anyhow::anyhow!("page not found after create"))
+            .ok_or_else(|| anyhow::anyhow!("page not found after insert"))
+    }
+
+    /// Batch insert or update multiple page records in a single query.
+    ///
+    /// Uses INSERT ... ON DUPLICATE KEY UPDATE for idempotent upserts.
+    /// Returns a map from URL to RecordId for link insertion.
+    pub async fn insert_pages_batch(
+        &self,
+        records: &[PageRecord],
+    ) -> Result<std::collections::HashMap<String, surrealdb::types::RecordId>> {
+        if records.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let mut parts = Vec::with_capacity(records.len());
+        for (i, _) in records.iter().enumerate() {
+            parts.push(format!(
+                "{{ group: $group{i}, url: $url{i}, title: $title{i}, \
+                 content: $content{i}, depth: $depth{i}, format: $format{i}, \
+                 crawled_at: $crawled_at{i}, meta: $meta{i} }}"
+            ));
+        }
+        let sql = format!(
+            "INSERT INTO page [{}] ON DUPLICATE KEY UPDATE \
+             title = $input.title, content = $input.content, \
+             depth = $input.depth, format = $input.format, \
+             crawled_at = $input.crawled_at, meta = $input.meta",
+            parts.join(", ")
+        );
+        let mut query = self.query(&sql);
+        for (i, record) in records.iter().enumerate() {
+            query = query.bind((format!("group{i}"), record.group.clone()));
+            query = query.bind((format!("url{i}"), record.url.clone()));
+            query = query.bind((format!("title{i}"), record.title.clone()));
+            query = query.bind((format!("content{i}"), record.content.clone()));
+            query = query.bind((format!("depth{i}"), record.depth));
+            query = query.bind((format!("format{i}"), record.format.clone()));
+            query = query.bind((format!("crawled_at{i}"), record.crawled_at));
+            query = query.bind((format!("meta{i}"), record.meta.clone()));
+        }
+        let raw: Vec<serde_json::Value> = query.await?.take(0)?;
+
+        let mut map = std::collections::HashMap::new();
+        for v in raw {
+            if let Some(url) = v.get("url").and_then(|u| u.as_str())
+                && let Some(id_str) = v.get("id").and_then(|i| i.as_str())
+                && let Ok(id) = surrealdb::types::RecordId::parse_simple(id_str)
+            {
+                map.insert(url.to_string(), id);
+            }
+        }
+        Ok(map)
     }
 
     /// Insert discovered links (graph edges) in a single batched query.
@@ -532,7 +549,12 @@ impl DbClient {
 
     /// Build KNN SQL query using HNSW index.
     /// Uses SurrealDB 4.0's `<|K, EF|>` operator for approximate nearest neighbor search.
-    fn knn_chunk_sql(limit: usize, ef: usize, alias: &str, additional_conditions: &[&str]) -> String {
+    fn knn_chunk_sql(
+        limit: usize,
+        ef: usize,
+        alias: &str,
+        additional_conditions: &[&str],
+    ) -> String {
         let conditions = if additional_conditions.is_empty() {
             String::new()
         } else {
@@ -574,7 +596,7 @@ impl DbClient {
         }
 
         let sql = Self::knn_chunk_sql(limit, ef, alias, &conditions);
-        
+
         let mut q = self.query(&sql).bind(("embedding", embedding.to_vec()));
         if let Some(g) = group {
             q = q.bind(("group", g.to_string()));

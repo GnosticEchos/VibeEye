@@ -5,7 +5,7 @@ use surrealdb::types::RecordId;
 
 use crate::crawl::CrawlResult;
 use crate::db::client::DbClient;
-use crate::db::models::{LinkRecord, PageRecord};
+use crate::db::models::PageRecord;
 use crate::db::util::derive_group;
 
 /// Persists crawl results into SurrealDB.
@@ -46,45 +46,43 @@ impl SurrealOutput {
         self.client.insert_page(&record).await
     }
 
-    /// Persist discovered links between pages.
-    pub async fn emit_links(
+    /// Batch persist crawl results as page records.
+    /// Returns a map from URL to RecordId for link insertion.
+    pub async fn emit_pages_batch(
         &self,
-        from_id: RecordId,
-        to_ids: &[RecordId],
-        anchor_texts: &[Option<String>],
-    ) -> Result<()> {
-        let links: Vec<LinkRecord> = to_ids
+        results: &[CrawlResult],
+    ) -> Result<HashMap<String, RecordId>> {
+        let records: Vec<PageRecord> = results
             .iter()
-            .zip(anchor_texts.iter())
-            .map(|(to_id, anchor_text)| LinkRecord {
+            .filter(|r| r.error.is_none())
+            .map(|result| PageRecord {
+                id: None,
                 group: self.group.clone(),
-                from_page: from_id.clone(),
-                to_page: to_id.clone(),
-                anchor_text: anchor_text.clone(),
-                discovered_at: Utc::now(),
+                url: result.url.clone(),
+                title: result.title.clone().unwrap_or_default(),
+                content: result.content.clone(),
+                depth: result.depth as i32,
+                format: result.format.clone(),
+                crawled_at: Utc::now(),
+                meta: result.meta.clone(),
             })
             .collect();
-        self.client.insert_discovered(&links).await
+
+        if records.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        self.client.insert_pages_batch(&records).await
     }
 }
 
 #[async_trait::async_trait]
 impl crate::crawl::output::CrawlOutput for SurrealOutput {
     async fn emit_results(&self, results: &[CrawlResult]) -> crate::Result<()> {
-        let mut page_ids: HashMap<String, RecordId> = HashMap::new();
-        for result in results {
-            if result.error.is_some() {
-                continue;
-            }
-            match self.emit_page(result).await {
-                Ok(id) => {
-                    page_ids.insert(result.url.clone(), id);
-                }
-                Err(e) => {
-                    tracing::warn!(error = %e, url = %result.url, "failed to persist page to SurrealDB");
-                }
-            }
-        }
+        let page_ids = self
+            .emit_pages_batch(results)
+            .await
+            .map_err(|e| crate::Error::Database(e.to_string()))?;
 
         #[cfg(feature = "embeddings")]
         if let Some(config) = &self.embed_config
@@ -139,11 +137,14 @@ impl SurrealOutput {
         page_ids: &HashMap<String, RecordId>,
         config: &crate::config::embeddings::EmbeddingConfig,
     ) -> Vec<ChunkEntry> {
-        let chunker = crate::chunk::Chunker::new(
-            config.target_chunk_size(),
-            config.chunk_overlap(),
-            crate::chunk::Tokenizer::CharHeuristic,
-        );
+        // chunkedrs guarantees token accuracy, so we can use the full context window
+        let target_chunk_size = config.target_chunk_size().min(config.context_window);
+
+        // Use model-aware tokenizer for accurate token counting
+        let tokenizer = crate::chunk::Tokenizer::Model(config.model.clone());
+
+        let chunker =
+            crate::chunk::Chunker::new(target_chunk_size, config.chunk_overlap(), tokenizer);
 
         let eligible: Vec<_> = results
             .iter()

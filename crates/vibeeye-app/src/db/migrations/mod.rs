@@ -12,6 +12,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "004_analyzer_overwrite",
         include_str!("004_analyzer_overwrite.surql"),
     ),
+    (
+        "005_idempotent_relations",
+        include_str!("005_idempotent_relations.surql"),
+    ),
 ];
 
 /// Run all pending migrations in order.
