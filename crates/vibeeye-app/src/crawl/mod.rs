@@ -77,7 +77,9 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
         base_url.host_str().unwrap_or("")
     );
 
-    let (mut queue, mut visited) = build_queue(&opts, &origin).await;
+    // Pass the seed URL (opts.url) to build_queue for sitemap fetching
+    // This allows sitemap to be fetched from the correct path (e.g., /docs/sitemap.xml)
+    let (mut queue, mut visited) = build_queue(&opts, &opts.url).await;
     let robots = load_robots(&opts, &origin).await;
     let semaphore = Arc::new(Semaphore::new(opts.concurrency.max(1)));
     let mut host_last_request: HashMap<String, Instant> = HashMap::new();
@@ -132,6 +134,11 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
             "crawled page"
         );
 
+        // Log health status every 50 pages
+        if total_crawled.is_multiple_of(50) {
+            BrowserSession::log_health_status();
+        }
+
         if results.len() >= EMIT_BATCH_SIZE {
             let batch = std::mem::take(&mut results);
             let opts = opts.clone();
@@ -172,13 +179,14 @@ pub async fn run(opts: CrawlOptions) -> Result<()> {
 
 async fn build_queue(
     opts: &CrawlOptions,
-    origin: &str,
+    seed_url: &str,
 ) -> (VecDeque<(String, u32)>, HashSet<String>) {
     let mut queue = VecDeque::new();
     let mut visited = HashSet::new();
 
     if opts.use_sitemap {
-        for url in sitemap::fetch_sitemap(origin).await {
+        // Fetch sitemap from the seed URL path (e.g., https://example.com/docs → https://example.com/docs/sitemap.xml)
+        for url in sitemap::fetch_sitemap(seed_url).await {
             let normalized = normalize_url(&url);
             if !visited.contains(&normalized)
                 && opts.max_pages.is_none_or(|max| visited.len() < max)
@@ -385,6 +393,33 @@ fn enqueue_discovered(
     enqueue_discovered_links(&links, depth, base_url, opts, visited, queue);
 }
 
+/// Metrics for understanding link discovery behavior.
+#[derive(Debug, Default)]
+struct LinkDiscoveryMetrics {
+    total_links: usize,
+    same_origin_filtered: usize,
+    already_visited: usize,
+    max_discovered_limited: usize,
+    enqueued: usize,
+}
+
+impl LinkDiscoveryMetrics {
+    fn log(&self, url: &str) {
+        if self.total_links == 0 {
+            return;
+        }
+        debug!(
+            url,
+            total = self.total_links,
+            same_origin_filtered = self.same_origin_filtered,
+            already_visited = self.already_visited,
+            max_limited = self.max_discovered_limited,
+            enqueued = self.enqueued,
+            "link discovery metrics"
+        );
+    }
+}
+
 fn enqueue_discovered_links(
     links: &[String],
     depth: u32,
@@ -398,8 +433,15 @@ fn enqueue_discovered_links(
     {
         return;
     }
+
+    let mut metrics = LinkDiscoveryMetrics {
+        total_links: links.len(),
+        ..Default::default()
+    };
+
     for link in links {
         if opts.same_origin && !is_same_origin(link, base_url) {
+            metrics.same_origin_filtered += 1;
             continue;
         }
         let normalized = normalize_url(link);
@@ -407,11 +449,22 @@ fn enqueue_discovered_links(
             && opts
                 .max_discovered_urls
                 .is_none_or(|max| visited.len() < max);
-        if can_enqueue {
-            visited.insert(normalized.clone());
-            queue.push_back((normalized, depth + 1));
+
+        if !can_enqueue {
+            if visited.contains(&normalized) {
+                metrics.already_visited += 1;
+            } else {
+                metrics.max_discovered_limited += 1;
+            }
+            continue;
         }
+
+        visited.insert(normalized.clone());
+        queue.push_back((normalized, depth + 1));
+        metrics.enqueued += 1;
     }
+
+    metrics.log(base_url.as_str());
 }
 
 async fn crawl_one_page(

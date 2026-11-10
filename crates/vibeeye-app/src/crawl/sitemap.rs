@@ -5,22 +5,41 @@ use quick_xml::events::Event;
 use std::time::Duration;
 
 /// Fetch and parse a sitemap.xml, returning the list of `<loc>` URLs.
+/// Uses the provided base_url to construct the sitemap URL.
 pub async fn fetch_sitemap(base_url: &str) -> Vec<String> {
-    let sitemap_url = format!("{base_url}/sitemap.xml");
+    // Construct sitemap URL from the base URL (e.g., https://example.com/docs → https://example.com/docs/sitemap.xml)
+    let sitemap_url = format!("{}/sitemap.xml", base_url.trim_end_matches('/'));
     let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
     {
         Ok(c) => c,
-        Err(_) => return Vec::new(),
+        Err(e) => {
+            tracing::debug!(error = %e, "failed to create HTTP client for sitemap");
+            return Vec::new();
+        }
     };
 
     let body = match client.get(&sitemap_url).send().await {
         Ok(resp) if resp.status().is_success() => match resp.text().await {
             Ok(t) => t,
-            Err(_) => return Vec::new(),
+            Err(e) => {
+                tracing::debug!(error = %e, sitemap_url, "failed to read sitemap response");
+                return Vec::new();
+            }
         },
-        _ => return Vec::new(),
+        Ok(resp) => {
+            tracing::debug!(
+                status = resp.status().as_u16(),
+                sitemap_url,
+                "sitemap not found"
+            );
+            return Vec::new();
+        }
+        Err(e) => {
+            tracing::debug!(error = %e, sitemap_url, "failed to fetch sitemap");
+            return Vec::new();
+        }
     };
 
     parse_sitemap(&body)
