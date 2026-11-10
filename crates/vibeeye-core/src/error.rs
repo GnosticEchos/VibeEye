@@ -24,6 +24,9 @@ pub enum VibeError {
     #[error("MCP protocol error: {0}")]
     Mcp(String),
 
+    #[error("Database error: {0}")]
+    Database(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
