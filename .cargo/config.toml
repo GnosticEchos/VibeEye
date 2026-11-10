@@ -1,0 +1,30 @@
+# Stack size configuration for Servo's SpiderMonkey thread-local storage
+#
+# Servo's SpiderMonkey engine allocates large thread-local storage (~8MB+ per thread).
+# The linker flags below set the main thread's stack size to 32MB to accommodate this.
+#
+# IMPORTANT: These flags only affect the main thread. Rust's test harness creates
+# test threads with the system default stack size (typically 8MB), which is insufficient
+# for Servo. Therefore:
+#
+# - Tests run WITHOUT the servo feature by default: `cargo test -p vibeeye-app`
+# - Servo-dependent tests require explicit feature: `cargo test -p vibeeye-app --features servo`
+# - For Servo tests, increase system stack limit: `ulimit -s 32768` before running
+#
+# Architecture: Servo is now an optional feature. The library compiles and tests pass
+# without it. Consumers (CLI, MCP) enable servo by default since they need browser functionality.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-Wl,-z,stack-size=33554432"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-Wl,-z,stack-size=33554432"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-stack_size,33554432"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-stack_size,33554432"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/STACK:33554432"]
