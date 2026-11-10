@@ -21,7 +21,7 @@ serde_json = { workspace = true }
 schemars = { workspace = true }
 
 # Browser engine (constrained by spec C-01)
-servo = { workspace = true }
+servo = { workspace = true, optional = true }
 url = { workspace = true }
 dpi = { workspace = true }
 rustls = { workspace = true }
@@ -40,6 +40,8 @@ tracing = { workspace = true }
 # Content processing
 scraper = { workspace = true }
 html-to-markdown-rs = { workspace = true }
+chunkedrs = "2.1.1"
+tiktoken = "4.1.2"
 
 # Crawl support
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
@@ -49,6 +51,9 @@ dirs = "7"
 
 # Time handling
 chrono = { workspace = true }
+
+# System metrics
+sysinfo = "0.33"
 
 # Optional: SurrealDB embedded storage
 surrealdb = { workspace = true, optional = true }
@@ -60,9 +65,19 @@ dotenvy = { workspace = true, optional = true }
 
 [features]
 default = []
+servo = ["dep:servo"]
 surrealdb = ["dep:surrealdb"]
 embeddings = ["surrealdb", "dep:indicatif", "dep:comfy-table", "dep:dotenvy"]
 
 [dev-dependencies]
 mockall = { workspace = true }
 tempfile = { workspace = true }
+
+# Integration tests require browser functionality
+[[test]]
+name = "e2e_nav_test"
+required-features = ["servo"]
+
+[[test]]
+name = "crawl_e2e"
+required-features = ["servo"]

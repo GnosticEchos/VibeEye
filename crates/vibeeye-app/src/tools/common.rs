@@ -1,5 +1,6 @@
 //! Common tool execution helpers
 
+#[cfg(feature = "servo")]
 use crate::browser::BrowserSession;
 use crate::{Error, Result};
 use std::collections::HashMap;
@@ -35,6 +36,7 @@ pub(crate) async fn resolve_redirect_url(url: &str) -> Option<String> {
 }
 
 /// Navigate to URL and capture page data
+#[cfg(feature = "servo")]
 pub async fn navigate_and_capture(url: &str) -> Result<PageCapture> {
     let resolved_url = resolve_redirect_url(url)
         .await

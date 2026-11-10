@@ -10,13 +10,19 @@ pub struct ToolRegistry {
 
 impl Default for ToolRegistry {
     fn default() -> Self {
-        let mut registry = Self {
+        let registry = Self {
             tools: HashMap::new(),
         };
-        // Register built-in tools
-        registry.register_tool(crate::tools::BrowseTool);
-        registry.register_tool(crate::tools::SnapshotTool);
-        registry.register_tool(crate::tools::ExtractTool);
+        // Register built-in tools (browser tools require servo feature)
+        #[cfg(feature = "servo")]
+        {
+            let mut registry = registry;
+            registry.register_tool(crate::tools::BrowseTool);
+            registry.register_tool(crate::tools::SnapshotTool);
+            registry.register_tool(crate::tools::ExtractTool);
+            registry
+        }
+        #[cfg(not(feature = "servo"))]
         registry
     }
 }
