@@ -64,8 +64,11 @@ impl ServoEngine {
         let (cmd_tx, cmd_rx) = mpsc::channel::<EngineCommand>();
         let (ready_tx, ready_rx) = mpsc::channel::<std::result::Result<(), String>>();
 
+        // SpiderMonkey requires large stack for thread-local storage.
+        // Servo's script thread uses 8MB; we use 16MB for safety margin.
         let thread = thread::Builder::new()
             .name("servo-engine".to_string())
+            .stack_size(16 * 1024 * 1024) // 16 MB
             .spawn(move || {
                 if let Err(e) = run_engine(viewport, cmd_rx, ready_tx) {
                     error!(error = %e, "Servo engine thread failed");
