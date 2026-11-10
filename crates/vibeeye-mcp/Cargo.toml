@@ -41,7 +41,8 @@ tracing-subscriber = { workspace = true }
 dirs = { workspace = true }
 
 [features]
-default = []
+default = ["servo"]
+servo = ["vibeeye-app/servo"]
 surrealdb = ["vibeeye-app/surrealdb"]
 embeddings = ["vibeeye-app/embeddings", "surrealdb"]
 

@@ -46,7 +46,8 @@ comfy-table = { workspace = true }
 libc = "0.2"
 
 [features]
-default = []
+default = ["servo"]
+servo = ["vibeeye-app/servo"]
 surrealdb = ["vibeeye-app/surrealdb"]
 embeddings = ["surrealdb", "vibeeye-app/embeddings", "dep:dotenvy"]
 
